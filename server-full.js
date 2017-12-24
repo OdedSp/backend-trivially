@@ -5,6 +5,8 @@
 
 'use strict';
 
+// var  mockQuests = require('./mockData.json')
+
 var cl = console.log;
 
 const express = require('express'),
@@ -47,7 +49,7 @@ function dbConnect() {
 
 	return new Promise((resolve, reject) => {
 		// Connection URL
-		var url = 'mongodb://localhost:27017/seed';
+		var url = 'mongodb://localhost:27017/trivue';
 		// Use connect method to connect to the Server
 		mongodb.MongoClient.connect(url, function (err, db) {
 			if (err) {
@@ -61,6 +63,13 @@ function dbConnect() {
 		});
 	});
 }
+
+// dbConnect().
+// then(db => {
+// 	const collection = db.collection('quest');
+// 	collection.insertMany(mockQuests)
+// })
+
 
 var objTypeRequiresUser = {
 	todo: true

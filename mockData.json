@@ -1,0 +1,352 @@
+[
+    {
+      "category": "Entertainment: Television",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "From what show is the character &quot;James Doakes&quot;? ",
+      "correct_answer": "Dexter",
+      "incorrect_answers": [
+        "Marvel&#039;s Daredevil",
+        "Boardwalk Empire",
+        "The Walking Dead"
+      ]
+    },
+    {
+      "category": "Entertainment: Film",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "Velma Kelly and Roxie Hart are the protagonists of which Oscar winning movie?",
+      "correct_answer": "Chicago",
+      "incorrect_answers": [
+        "Dreamgirls",
+        "Cabaret",
+        "All That Jazz"
+      ]
+    },
+    {
+      "category": "Geography",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "What is the only country in the world with a flag that doesn&#039;t have four right angles?",
+      "correct_answer": "Nepal",
+      "incorrect_answers": [
+        "Panama",
+        "Angola",
+        "Egypt"
+      ]
+    },
+    {
+      "category": "Geography",
+      "type": "boolean",
+      "difficulty": "medium",
+      "question": "The flag of South Africa features 7 colours.",
+      "correct_answer": "False",
+      "incorrect_answers": [
+        "True"
+      ]
+    },
+    {
+      "category": "Politics",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "Before 2011, &quot;True Capitalist Radio&quot; was known by a different name. What was that name?",
+      "correct_answer": "True Conservative Radio",
+      "incorrect_answers": [
+        "True Republican Radio",
+        "Texan Capitalist Radio",
+        "United Capitalists"
+      ]
+    },
+    {
+      "category": "History",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "Who was the Prime Minister of the United Kingdom for most of World War II?",
+      "correct_answer": "Winston Churchill",
+      "incorrect_answers": [
+        "Neville Chamberlain",
+        "Harold Macmillan",
+        "Edward Heath"
+      ]
+    },
+    {
+      "category": "History",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "According to scholarly estimates, what percentage of the world population at the time died due to Tamerlane&#039;s conquests?",
+      "correct_answer": "5%",
+      "incorrect_answers": [
+        "1%",
+        "3%",
+        "&lt;1%"
+      ]
+    },
+    {
+      "category": "Sports",
+      "type": "boolean",
+      "difficulty": "medium",
+      "question": "Skateboarding will be included in the 2020 Summer Olympics in Tokyo.",
+      "correct_answer": "True",
+      "incorrect_answers": [
+        "False"
+      ]
+    },
+    {
+      "category": "General Knowledge",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "What is the name given to Indian food cooked over charcoal in a clay oven?",
+      "correct_answer": "Tandoori",
+      "incorrect_answers": [
+        "Biryani",
+        "Pani puri",
+        "Tiki masala"
+      ]
+    },
+    {
+      "category": "General Knowledge",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "On average, Americans consume 100 pounds of what per second?",
+      "correct_answer": "Chocolate",
+      "incorrect_answers": [
+        "Potatoes",
+        "Donuts",
+        "Cocaine"
+      ]
+    },
+    {
+      "category": "Entertainment: Video Games",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "The creator of the Touhou Project series is:",
+      "correct_answer": "ZUN",
+      "incorrect_answers": [
+        "SUN",
+        "RUN",
+        "PUN"
+      ]
+    },
+    {
+      "category": "History",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "Joseph Stalin had a criminal past doing what?",
+      "correct_answer": "Robbing trains",
+      "incorrect_answers": [
+        "Pedophilia",
+        "Tax evation",
+        "Identity Fraud"
+      ]
+    },
+    {
+      "category": "Entertainment: Video Games",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "In the first Left 4 Dead, you can play as either of these four characters.",
+      "correct_answer": "Francis, Bill, Zoey, and Louis",
+      "incorrect_answers": [
+        "Bender, Andrew, Allison, and Brian",
+        "Coach, Ellis, Nick, and Rochelle",
+        "Harry, Ron, Hermione and Dumbledore"
+      ]
+    },
+    {
+      "category": "Science: Mathematics",
+      "type": "boolean",
+      "difficulty": "medium",
+      "question": "E = MC3",
+      "correct_answer": "False",
+      "incorrect_answers": [
+        "True"
+      ]
+    },
+    {
+      "category": "Geography",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "The land mass of modern day Turkey is called what?",
+      "correct_answer": "Anatolia",
+      "incorrect_answers": [
+        "Ismuth of Ottoma",
+        "Ottoma",
+        "Ismuth of Anatolia"
+      ]
+    },
+    {
+      "category": "History",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "Who is attributed credit for recording the epic poem The Odyssey?",
+      "correct_answer": "Homer",
+      "incorrect_answers": [
+        "Aristotle",
+        "Odysseus",
+        "Socrates"
+      ]
+    },
+    {
+      "category": "Entertainment: Television",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "What is Meg&#039;s full name in &quot;Family Guy&quot;?",
+      "correct_answer": "Megatron Griffin",
+      "incorrect_answers": [
+        "Who-Cares Griffin",
+        "Neil Griffin",
+        "Megan Griffin"
+      ]
+    },
+    {
+      "category": "History",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "Which Las Vegas casino was originally constructed and operated by mobster Bugsy Siegel?",
+      "correct_answer": "The Flamingo",
+      "incorrect_answers": [
+        "The MGM Grand",
+        "The Sands",
+        "The Sahara"
+      ]
+    },
+    {
+      "category": "Science: Mathematics",
+      "type": "boolean",
+      "difficulty": "medium",
+      "question": "Zero factorial is equal to zero. ",
+      "correct_answer": "False",
+      "incorrect_answers": [
+        "True"
+      ]
+    },
+    {
+      "category": "Geography",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "What is the region conjoining Pakistan, India, and China with unknown leadership called?",
+      "correct_answer": "Kashmir",
+      "incorrect_answers": [
+        "Andorra",
+        "Gibraltar",
+        "Quin"
+      ]
+    },
+    {
+      "category": "Geography",
+      "type": "boolean",
+      "difficulty": "medium",
+      "question": "Norway has a larger land area than Sweden.",
+      "correct_answer": "False",
+      "incorrect_answers": [
+        "True"
+      ]
+    },
+    {
+      "category": "Entertainment: Japanese Anime & Manga",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "Krusty is the guild master of which guild in &quot;Log Horizon&quot;?",
+      "correct_answer": "D. D. D",
+      "incorrect_answers": [
+        "Silver Sword",
+        "West Wind Brigade",
+        "Oceanic Systems (Marine Agency)"
+      ]
+    },
+    {
+      "category": "Politics",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "Before 2016, in which other year did Donald Trump run for President?",
+      "correct_answer": "2000",
+      "incorrect_answers": [
+        "2012",
+        "1988",
+        "2008"
+      ]
+    },
+    {
+      "category": "Entertainment: Books",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "What book series published by Jim Butcher follows a wizard in modern day Chicago?",
+      "correct_answer": "The Dresden Files",
+      "incorrect_answers": [
+        "A Hat in Time",
+        "The Cinder Spires",
+        "My Life as a Teenage Wizard"
+      ]
+    },
+    {
+      "category": "History",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "In 1961, an American B-52 aircraft crashed and nearly detonated two 4mt nuclear bombs over which US city?",
+      "correct_answer": "Goldsboro, North Carolina",
+      "incorrect_answers": [
+        "Hicksville, New York",
+        "Jacksonville, Florida",
+        "Conway, Arkansas"
+      ]
+    },
+    {
+      "category": "Entertainment: Japanese Anime & Manga",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "In &quot;Highschool DxD&quot;, Koneko Toujou is from what race?",
+      "correct_answer": "Nekomata",
+      "incorrect_answers": [
+        "Kitsune",
+        "Human",
+        "Kappa"
+      ]
+    },
+    {
+      "category": "Entertainment: Books",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "What is the make and model of the tour vehicles in &quot;Jurassic Park&quot;?",
+      "correct_answer": "1992 Toyota Land Cruiser",
+      "incorrect_answers": [
+        "1992 Jeep Wrangler YJ Sahar",
+        "1992 Ford Explorer XLT",
+        "Mercedes M-Class"
+      ]
+    },
+    {
+      "category": "General Knowledge",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "What was the original name of the search engine &quot;Google&quot;?",
+      "correct_answer": "BackRub",
+      "incorrect_answers": [
+        "CatMassage",
+        "SearchPro",
+        "Netscape Navigator"
+      ]
+    },
+    {
+      "category": "Entertainment: Comics",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "In the DC Comics 2016 reboot, Rebirth, which speedster escaped from the Speed Force after he had been erased from existance?",
+      "correct_answer": "Wally West",
+      "incorrect_answers": [
+        "Johnny Quick",
+        "Jay Garrick",
+        "Eobard Thawne"
+      ]
+    },
+    {
+      "category": "Geography",
+      "type": "multiple",
+      "difficulty": "medium",
+      "question": "What continent is the country Lesotho in?",
+      "correct_answer": "Africa",
+      "incorrect_answers": [
+        "Asia",
+        "South America",
+        "Europe"
+      ]
+    }
+  ]
