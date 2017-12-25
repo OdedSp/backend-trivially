@@ -1,3 +1,5 @@
+// import { forEachOf } from '../../../../Users/Sidney/AppData/Local/Microsoft/TypeScript/2.6/node_modules/@types/async';
+
 // Minimal Simple REST API Handler (With MongoDB and Socket.io)
 // Plus support for simple login and session
 // Plus support for file upload
@@ -30,6 +32,8 @@ const serverRoot = 'http://localhost:3003/';
 const baseUrl = serverRoot + 'data';
 
 // app.use(express.static('uploads'));
+
+const gameRooms = [{roomName: getRand(4), status: 'empty'}]
 
 
 app.use(cors(corsOptions));
@@ -72,7 +76,7 @@ function dbConnect() {
 
 
 var objTypeRequiresUser = {
-	todo: true
+	quest: true
 }
 // This function is called by all REST end-points to take care
 // setting the basic mongo query:
@@ -278,6 +282,8 @@ http.listen(3003, function () {
 
 });
 
+var roomName = ''
+
 
 io.on('connection', function (socket) {
 	console.log('a user connected');
@@ -286,8 +292,36 @@ io.on('connection', function (socket) {
 	});
 	socket.on('chat msg', function (msg) {
 		// console.log('message: ' + msg);
-		io.emit('chat newMsg', msg);
+		io.emit('chat newMsg', 'user: ' + rand + ',   message: ' +msg);
 	});
+	socket.on('request-game-room', function(msg){
+		roomName = getRoomName()
+		socket.emit('game-room', roomName)
+	})
+	socket.on('join',function(msg){
+		console.log('got join: ' + msg)
+		socket.join(roomName)		
+	})
+	socket.on('answer-a-question',function(msg){
+		console.log('user: ' + msg.user+ ' ,  gameId: '+ msg.gameId)
+	})
+	io.in(roomName).emit('xxx')
 });
 
 cl('WebSocket is Ready');
+
+function getRand(size){
+	return Math.random().toString(36,2).substring(2,2+size)
+}
+
+function getRoomName(){
+	for (var gameRoomObj of gameRooms){
+		if (gameRoomObj.status == 'empty') {
+			gameRoomObj.status = 'first-player'
+			return gameRoomObj
+		}
+	}
+	var newRoom = {roomName: getRand(4), status: 'first-player'}
+	gameRooms.push(newRoom)
+	return newRoom
+}

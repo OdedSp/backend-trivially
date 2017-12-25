@@ -11,9 +11,22 @@
       #messages { list-style-type: none; margin: 0; padding: 0; }
       #messages li { padding: 5px 10px; }
       #messages li:nth-child(odd) { background: #eee; }
+      .play-container{
+        position: absolute;
+        top: 20vh;
+        width: 80vw;
+        height: 40vh;
+        margin: auto;
+        background: pink
+      }
     </style>
   </head>
   <body>
+    <div class="play-container">
+        <button class="play-btn">Play</button>
+        <br><div>Playing in room: <span class="play-area"></span></div><br>
+        <div class="question-container"></div>
+    </div>
     <ul id="messages"></ul>
     <form action="">
       <input id="m" autocomplete="off" /><button>Send</button>
@@ -21,6 +34,18 @@
     <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
+      var gameId = null;
+      var questions = [{question:'What is the capital of Isreal?',a:'tel-aviv',b:'haifa',c:'jerusalem', d:'eilat', correctAnswer: 'jerusalem'}]
+      const questionTemplate = `
+      <div id="timer">00:13</div><br>
+      <div class="question-content"></div>
+      <div class="answer-a"></div>
+      <div class="answer-b"></div>
+      <div class="answer-c"></div>
+      <div class="answer-d"></div>
+      <input class="user-answer">
+      <button class="answer-send">SEND</button>
+      `
       var socket = io();
        $('form').submit(function(){
           socket.emit('chat msg', $('#m').val());
@@ -30,6 +55,35 @@
         socket.on('chat newMsg', function(msg){
           $('#messages').append($('<li>').text(msg));
         });
+        socket.on('game-room',function(msg){
+          if (!gameId) {
+            gameId = msg.roomName;
+            $('.play-area').html(gameId)
+            $('.question-container').html(questionTemplate)
+            $('.question-content').html(questions[0].question)
+            $('.answer-a').html(questions[0].a)
+            $('.answer-b').html(questions[0].b)
+            $('.answer-c').html(questions[0].c)
+            $('.answer-d').html(questions[0].d)
+          }
+          socket.emit('join',gameId)
+        })
+        socket.on('xxx',function(msg){
+          console.log('yey got back from server')
+        })
+        $('.play-btn').on('click', ()=>{
+          socket.emit('request-game-room')
+        })
+
+        $('body').on('click','.answer-send',()=>{
+          console.log($('.user-answer').val())
+          if ($('.user-answer').val() == questions[0].correctAnswer) {
+            console.log('yey')
+            socket.emit('answer-a-question',{answer: questions[0].correctAnswer,user: 'thisUSer',gameId: gameId});
+          }
+        })
+
+      
     </script>
   </body>
 </html>
