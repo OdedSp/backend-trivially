@@ -280,67 +280,62 @@ http.listen(3003, function () {
 });
 
 
-// const gameRooms = [{roomName: getRand(4), status: 'empty'}]
 const gameRooms = []
-// var roomName = ''
 
 
 io.on('connection', function (socket) {
+	var room = null
+	socket.on('joinGameRoom', _ => {
+		room = getRoom()
+		console.log(room)
+		socket.join(room.name)
+		if (room.connections === 1) socket.emit('waitingForOpponent')
+		else {
+			getQuestionSet()
+			.then(quests => {
+				room.quests = quests.slice(0, 10)
+				io.in(room.name).emit('startGame', room)	
+			})
+			.catch(err => console.log(err))
+		}
+	})
+
+	socket.on('userAnswer',(answer) =>{
+		socket.in(room.name).emit('rivalAnswer',answer)
+	})
 	
-	const room = getRoom()
-	console.log(room)
-	socket.join(room.name)
-	
-	if (room.connections === 1) socket.emit('waitingForOpponent')
-	else io.in(room.name).emit('startGame')
 
 
 	// var randUserName = getRand(5)
 	console.log('a user connected');
 	socket.on('disconnect', function () {
 		console.log('user disconnected')
-		io.in(room.name).emit('opponentLeft')
+		// io.in(room.name).emit('opponentLeft')
 	});
-	// socket.on('chat msg', function (msg) {
-	// 	// console.log('message: ' + msg);
-	// 	io.emit('chat newMsg', 'user: ' + randUserName + ',   message: ' + msg);
-	// });
-	// socket.on('request-game-room', function(msg){
-	// 	roomName = getRoomName()
-	// 	socket.emit('game-room', roomName)
-	// })
-	// socket.on('join',function(msg){
-	// 	console.log('got join: ' + msg)
-	// 	socket.join(roomName)		
-	// })
-	// socket.on('answer-a-question',function(msg){
-	// 	console.log('user: ' + msg.user+ ' ,  gameId: '+ msg.gameId)
-	// })
-	// io.in(roomName).emit('xxx')
 });
-// io.on('connection', function (socket) {
-// 	var randUserName = getRand(5)
-// 	console.log('a user connected');
-// 	socket.on('disconnect', function () {
-// 		console.log('user disconnected');
-// 	});
-// 	socket.on('chat msg', function (msg) {
-// 		// console.log('message: ' + msg);
-// 		io.emit('chat newMsg', 'user: ' + randUserName + ',   message: ' + msg);
-// 	});
-// 	socket.on('request-game-room', function(msg){
-// 		roomName = getRoomName()
-// 		socket.emit('game-room', roomName)
-// 	})
-// 	socket.on('join',function(msg){
-// 		console.log('got join: ' + msg)
-// 		socket.join(roomName)		
-// 	})
-// 	socket.on('answer-a-question',function(msg){
-// 		console.log('user: ' + msg.user+ ' ,  gameId: '+ msg.gameId)
-// 	})
-// 	io.in(roomName).emit('xxx')
-// });
+
+
+// gets a set of questions
+function getQuestionSet (){
+	var collectionName = 'quest'
+	var query = {}
+	return new Promise((resolve, reject) => {
+		dbConnect().then(db => {
+			const collection = db.collection(collectionName);
+	
+			collection.find(query).toArray((err, objs) => {
+				if (err) {
+					reject('Cannot get you a list of ', err)
+				} else {
+					cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
+					resolve(objs);
+				}
+				db.close();
+			});
+		});
+	})
+}
+
 
 cl('WebSocket is Ready');
 
@@ -363,14 +358,3 @@ function createRoom() {
 	return room
 }
 
-// function getRoomName(){
-// 	for (var gameRoom of gameRooms){
-// 		if (gameRoom.status === 'empty') {
-// 			gameRoom.status = 'first-player'
-// 			return gameRoom
-// 		}
-// 	}
-// 	var newRoom = {roomName: getRand(4), status: 'first-player'}
-// 	gameRooms.push(newRoom)
-// 	return newRoom
-// }

@@ -45,6 +45,7 @@
       <div class="answer-d"></div>
       <input class="user-answer">
       <button class="answer-send">SEND</button>
+      <div class="rival-answer"></div>
       `
       var socket = io();
       //  $('form').submit(function(){
@@ -55,34 +56,32 @@
       //   socket.on('chat newMsg', function(msg){
       //     $('#messages').append($('<li>').text(msg));
       //   });
+
+        var playingInRoom = null;
+
         socket.on('waitingForOpponent', _=> console.log('Waiting for opponent'))
-        socket.on('startGame', _=> console.log('can start game'))
-        // socket.on('game-room',function(msg){
-        //   if (!gameId) {
-        //     gameId = msg.roomName;
-        //     $('.play-area').html(gameId)
-        //     $('.question-container').html(questionTemplate)
-        //     $('.question-content').html(questions[0].question)
-        //     $('.answer-a').html(questions[0].a)
-        //     $('.answer-b').html(questions[0].b)
-        //     $('.answer-c').html(questions[0].c)
-        //     $('.answer-d').html(questions[0].d)
-        //   }
-        //   socket.emit('join',gameId)
-        // })
-        // socket.on('xxx',function(msg){
-        //   console.log('yey got back from server')
-        // })
+        socket.on('startGame', (room)=> {
+              playingInRoom = room;
+              console.log('can start game')
+              console.log('room name: ',room)
+              $('.question-container').html(questionTemplate)
+              $('.question-content').html(`question id: ${room.quests[0]._id}`)
+              $('.user-answer').val(`${room.quests[0].correct_answer}`)
+            }
+        )
+
+        socket.on('rivalAnswer', answer => {
+          $('.rival-answer').html(answer)
+        })
+
+
         $('.play-btn').on('click', ()=>{
-          socket.emit('request-game-room')
+          socket.emit('joinGameRoom')
         })
 
         $('body').on('click','.answer-send',()=>{
-          console.log($('.user-answer').val())
-          if ($('.user-answer').val() == questions[0].correctAnswer) {
-            console.log('yey')
-            socket.emit('answer-a-question',{answer: questions[0].correctAnswer,user: 'thisUSer',gameId: gameId});
-          }
+          var userAnswer = {questionId: playingInRoom.quests[0]._id, selectedAnswer: $('.user-answer').val()}
+          socket.emit('userAnswer',userAnswer)
         })
 
       
