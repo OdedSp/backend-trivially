@@ -45,7 +45,8 @@
       <div class="answer-d"></div>
       <input class="user-answer">
       <button class="answer-send">SEND</button>
-      <div class="rival-answer"></div>
+      Rival Answer: <div class="rival-answer"></div>
+      Answer Result: <div class="answer-result"></div>
       `
       var socket = io();
       //  $('form').submit(function(){
@@ -70,8 +71,12 @@
             }
         )
 
-        socket.on('rivalAnswer', answer => {
-          $('.rival-answer').html(answer)
+        socket.on('rivalAnswer', incomingMsg => {
+          $('.rival-answer').html(incomingMsg.selectedAnswer)
+        })
+
+        socket.on('processedAnswer', result => {
+          $('.answer-result').html(result)
         })
 
 

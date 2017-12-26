@@ -1,4 +1,3 @@
-// import { forEachOf } from '../../../../Users/Sidney/AppData/Local/Microsoft/TypeScript/2.6/node_modules/@types/async';
 
 // Minimal Simple REST API Handler (With MongoDB and Socket.io)
 // Plus support for simple login and session
@@ -301,7 +300,9 @@ io.on('connection', function (socket) {
 	})
 
 	socket.on('userAnswer',(answer) =>{
-		socket.in(room.name).emit('rivalAnswer',answer)
+		socket.emit('processedAnswer',processedAnswerResult(room,answer)) //sending the calculated points back to the client who sent the answer, and only to him
+		answer.rivalPoints = processedAnswerResult(room,answer) 
+		socket.in(room.name).emit('rivalAnswer',answer) //sending the answer to the user's rival, and only to him
 	})
 	
 
@@ -356,5 +357,10 @@ function createRoom() {
 	}
 	gameRooms.push(room)
 	return room
+}
+
+function processedAnswerResult(room,answer){
+	var question = room.quests.find(question => question._id == answer.questionId)
+	return ((question.correct_answer == answer.selectedAnswer)*100)
 }
 
