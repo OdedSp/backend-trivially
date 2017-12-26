@@ -298,7 +298,8 @@ io.on('connection', function (socket) {
 	// var randUserName = getRand(5)
 	console.log('a user connected');
 	socket.on('disconnect', function () {
-		console.log('user disconnected');
+		console.log('user disconnected')
+		io.in(room.name).emit('opponentLeft')
 	});
 	// socket.on('chat msg', function (msg) {
 	// 	// console.log('message: ' + msg);
