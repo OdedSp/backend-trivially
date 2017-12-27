@@ -4,20 +4,41 @@
     <title>Socket.IO chat</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; }
+      body { 
+        font: 13px Helvetica, Arial;
+      }
       form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
       form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
       form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
       #messages { list-style-type: none; margin: 0; padding: 0; }
       #messages li { padding: 5px 10px; }
       #messages li:nth-child(odd) { background: #eee; }
+      .stats {
+        display: flex;
+        justify-content: space-between;
+        min-width: 200px;
+      }
+      .stats .points {
+        font-weight: bold;
+        font-size: 1.2em;
+      }
       .play-container{
-        position: absolute;
-        top: 20vh;
-        width: 80vw;
-        height: 40vh;
-        margin: auto;
-        background: pink
+        position: fixed;
+        top: 50vh;
+        left: 50vw;
+        transform: translate(-50%, -50%);
+        /* width: 80vw; */
+        /* height: 40vh; */
+        /* margin: auto; */
+        background: pink;
+        padding: 30px;
+      }
+      .answer {
+        padding: 10px;
+        font-size: 1em;
+        cursor: pointer;
+        border-radius: 8px;
+        width: 100%;
       }
     </style>
   </head>
@@ -25,6 +46,11 @@
     <div class="play-container">
         <button class="play-btn">Play</button>
         <br><div>Playing in room: <span class="play-area"></span></div><br>
+        <div class="stats">
+          <div class="myself">Your points: <span class="points">0</span></div>
+          <div class="rival"><span class="points">0</span>: Rival's points</div>
+        </div>
+        <br><hr><br>
         <div class="question-container"></div>
     </div>
     <ul id="messages"></ul>
@@ -34,20 +60,31 @@
     <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      var gameId = null;
-      var questions = [{question:'What is the capital of Isreal?',a:'tel-aviv',b:'haifa',c:'jerusalem', d:'eilat', correctAnswer: 'jerusalem'}]
-      const questionTemplate = `
-      <div id="timer">00:13</div><br>
-      <div class="question-content"></div>
-      <div class="answer-a"></div>
-      <div class="answer-b"></div>
-      <div class="answer-c"></div>
-      <div class="answer-d"></div>
-      <input class="user-answer">
-      <button class="answer-send">SEND</button>
-      <div class="rival-answer"></div>
-      `
-      var socket = io();
+
+
+      const socket = io();
+      var myPoints = 0;
+      var rivalPoints = 0;
+
+      // var gameId = null;
+      // var questions = [{question:'What is the capital of Isreal?',a:'tel-aviv',b:'haifa',c:'jerusalem', d:'eilat', correctAnswer: 'jerusalem'}]
+      function getQuestTemplate(quest) {
+        var questTemplate = `<div class="question-content">${quest.quest}</div><br><hr>`
+        questTemplate += quest.answers.reduce((acc, answer) => {
+          return acc += `<br><div><button onclick="sendAnswer('${answer}', '${quest._id}')" class="answer">${answer}</button></div>`
+        }, '')
+        questTemplate += `
+          <br>
+          <div class="rival-answer"></div>
+        `
+        return questTemplate
+      }
+
+      function sendAnswer(answer, questId) {
+          console.log('My answer is:', answer)
+          socket.emit('userAnswer', { answer, questId })
+      }
+
       //  $('form').submit(function(){
       //     socket.emit('chat msg', $('#m').val());
       //     $('#m').val('');
@@ -57,32 +94,37 @@
       //     $('#messages').append($('<li>').text(msg));
       //   });
 
-        var playingInRoom = null;
+        // var playingInRoom = null;
 
         socket.on('waitingForOpponent', _=> console.log('Waiting for opponent'))
-        socket.on('startGame', (room)=> {
-              playingInRoom = room;
+        socket.on('startGame', (game)=> {
+              // playingInRoom = game.room;
               console.log('can start game')
-              console.log('room name: ',room)
-              $('.question-container').html(questionTemplate)
-              $('.question-content').html(`question id: ${room.quests[0]._id}`)
-              $('.user-answer').val(`${room.quests[0].correct_answer}`)
+              console.log('room name: ', game.room)
+              console.log('questions: ', game.quests)
+              $('.play-area').text(game.room)
+              $('.question-container').html(getQuestTemplate(game.quests[0]))
+              // $('.question-content').html(`question id: ${game.quests[0]._id}`)
+              // $('.user-answer').val(`${game.quests[0].answers}`)
             }
         )
 
         socket.on('rivalAnswer', answer => {
-          $('.rival-answer').html(answer)
+          rivalPoints += answer.points
+          $('.rival-answer').text(`Rival answered: ${answer.answer}`)
+          $('.rival .points').text(rivalPoints)
         })
 
 
-        $('.play-btn').on('click', ()=>{
+        $('.play-btn').on('click', (ev)=>{
           socket.emit('joinGameRoom')
+          ev.target.disabled = true
         })
 
-        $('body').on('click','.answer-send',()=>{
-          var userAnswer = {questionId: playingInRoom.quests[0]._id, selectedAnswer: $('.user-answer').val()}
-          socket.emit('userAnswer',userAnswer)
-        })
+        // $('body').on('click','.answer-send',()=>{
+        //   var userAnswer = {questionId: playingInRoom.quests[0]._id, selectedAnswer: $('.user-answer').val()}
+        //   socket.emit('userAnswer',userAnswer)
+        // })
 
       
     </script>

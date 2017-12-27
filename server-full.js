@@ -73,7 +73,7 @@ function dbConnect() {
 
 
 var objTypeRequiresUser = {
-	quest: true
+	// quest: true
 }
 // This function is called by all REST end-points to take care
 // setting the basic mongo query:
@@ -285,23 +285,47 @@ const gameRooms = []
 
 io.on('connection', function (socket) {
 	var room = null
+	var currQuest = {
+		quest: null,
+		answerCount: 0
+	}
+	// var rivalId = null
 	socket.on('joinGameRoom', _ => {
 		room = getRoom()
 		console.log(room)
 		socket.join(room.name)
-		if (room.connections === 1) socket.emit('waitingForOpponent')
+		room.players[socket.id] = {
+			answeredCurrQuest: false,
+			currQuestPts: 0,
+			totalPts: 0,
+			correctAnswers: 0
+		}
+		if (room.connections === 1) {
+			socket.emit('waitingForOpponent')
+		}
 		else {
-			getQuestionSet()
+			getQuestionSet(10)
 			.then(quests => {
-				room.quests = quests.slice(0, 10)
-				io.in(room.name).emit('startGame', room)	
+				console.log(quests)
+				room.quests = quests
+				var questsForUser = getUserQuests(quests)
+				// io.in(room.name).emit('startGame', {room: room.name, quests: questsForUser})
+				io.in(room.name).emit('nextTurn', room.quests[room.currTurn.idx])
 			})
 			.catch(err => console.log(err))
 		}
 	})
 
-	socket.on('userAnswer',(answer) =>{
-		socket.in(room.name).emit('rivalAnswer',answer)
+	socket.on('userAnswer',(answer) => {
+		cl('user answered:', answer.answer)
+		var correct = checkIfCorrect(answer, room.quests)
+		var { playerStats } = room.players[socket.id]
+		var points = 0
+		if (correct) points = 100
+		playerStats.currQuestPts = points
+		playerStats.totalPts += points
+
+		socket.in(room.name).emit('rivalAnswer', { answer: answer.answer, points })
 	})
 	
 
@@ -314,16 +338,19 @@ io.on('connection', function (socket) {
 	});
 });
 
+cl('WebSocket is Ready');
+
+//******************** Functions used in the trivia socket connection ************************//
 
 // gets a set of questions
-function getQuestionSet (){
+function getQuestionSet(count) {
 	var collectionName = 'quest'
-	var query = {}
+	// var query = {}
 	return new Promise((resolve, reject) => {
 		dbConnect().then(db => {
 			const collection = db.collection(collectionName);
 	
-			collection.find(query).toArray((err, objs) => {
+			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
 				if (err) {
 					reject('Cannot get you a list of ', err)
 				} else {
@@ -336,12 +363,39 @@ function getQuestionSet (){
 	})
 }
 
-
-cl('WebSocket is Ready');
-
-function getRand(size){
-	return Math.random().toString(36).substring(2,2+size)
+// TODO: perhaps use index of question instead of finding by id
+function checkIfCorrect(answer, quests) {
+	console.log('answer', answer)
+	console.log('quests', quests)
+	var quest = quests.find(({_id}) => _id.toString() === answer.questId)
+	cl('quest', quest)
+	if (!quest) throw new Error('The question could not be found in function checkIfCorrect()') // for dev
+	return answer.answer === quest.correct_answer
 }
+
+function getUserQuests(quests) {
+	return quests.map(quest => ({
+		_id: quest._id,
+		quest: quest.question,
+		answers: getShuffledAnswers(quest),
+		category: quest.category,
+		type: quest.type
+	}))
+}
+
+function getShuffledAnswers(quest) {
+	var answers = [];
+	for (let i = 0; i < quest.incorrect_answers.length; i++) {
+	  answers.push(quest.incorrect_answers[i]);
+	}
+	answers.push(quest.correct_answer);
+	
+	for (let i = answers.length - 1; i > 0; i--) {
+	  let j = Math.floor(Math.random() * (i + 1));
+	  [answers[i], answers[j]] = [answers[j], answers[i]];
+	}
+	return answers
+  }
 
 function getRoom() {
 	var room = gameRooms.find(({connections}) => connections === 1) || createRoom()
@@ -352,9 +406,17 @@ function getRoom() {
 function createRoom() {
 	var room = {
 		name: getRand(5),
-		connections: 0
+		connections: 0,
+		players: {},
+		currTurn: {
+			questIdx: 0,
+			answerCount: 0
+		}
 	}
 	gameRooms.push(room)
 	return room
 }
 
+function getRand(size){
+	return Math.random().toString(36).substring(2,2+size)
+}
