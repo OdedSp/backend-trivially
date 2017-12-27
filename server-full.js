@@ -282,6 +282,7 @@ http.listen(3003, function () {
 
 const gameRooms = []
 
+let botMode = true
 
 io.on('connection', function (socket) {
 	var room = null
@@ -292,40 +293,50 @@ io.on('connection', function (socket) {
 	// var rivalId = null
 	socket.on('joinGameRoom', _ => {
 		room = getRoom()
-		console.log(room)
+		cl(room)
 		socket.join(room.name)
-		room.players[socket.id] = {
-			answeredCurrQuest: false,
-			currQuestPts: 0,
-			totalPts: 0,
-			correctAnswers: 0
-		}
+		room.players[socket.id] = getEmptyPlayerStats()
 		if (room.connections === 1) {
 			socket.emit('waitingForOpponent')
+			if (botMode) require('./triviaRivalBot')()
 		}
 		else {
-			getQuestionSet(10)
+			getQuestionSet(5)
 			.then(quests => {
-				console.log(quests)
+				// cl(quests)
 				room.quests = quests
-				var questsForUser = getUserQuests(quests)
+				room.clientQuests = getClientQuests(quests)
+				// var questsForUser = getUserQuests(quests)
 				// io.in(room.name).emit('startGame', {room: room.name, quests: questsForUser})
-				io.in(room.name).emit('nextTurn', room.quests[room.currTurn.idx])
+				io.in(room.name).emit('nextRound', room.clientQuests[room.currTurn.questIdx])
 			})
 			.catch(err => console.log(err))
 		}
 	})
 
-	socket.on('userAnswer',(answer) => {
-		cl('user answered:', answer.answer)
-		var correct = checkIfCorrect(answer, room.quests)
-		var { playerStats } = room.players[socket.id]
+	socket.on('playerAnswer',(answer) => {
+		cl('player answered:', answer)
+		var correct = checkIfCorrect(answer.answer, room.quests[room.currTurn.questIdx])
+		var playerStats = room.players[socket.id]
 		var points = 0
 		if (correct) points = 100
 		playerStats.currQuestPts = points
 		playerStats.totalPts += points
+	
+		socket.emit('answerProcessed', { answerIdx: answer.answerIdx, points })
 
-		socket.in(room.name).emit('rivalAnswer', { answer: answer.answer, points })
+		socket.in(room.name).emit('rivalAnswer', { answerIdx: answer.answerIdx, points })
+
+		if (++room.currTurn.answerCount === room.connections) {
+			var questIdx = ++room.currTurn.questIdx
+			room.currTurn.answerCount = 0
+			setTimeout(_=> {
+				room.quests.length !== questIdx
+				? io.in(room.name).emit('nextRound', room.clientQuests[questIdx])
+				// : io.in(room.name).emit('gameCompleted') // TODO: write handleGameOver()
+				: handleGameOver(room)
+			}, 3000)
+		}
 	})
 	
 
@@ -363,17 +374,24 @@ function getQuestionSet(count) {
 	})
 }
 
-// TODO: perhaps use index of question instead of finding by id
-function checkIfCorrect(answer, quests) {
-	console.log('answer', answer)
-	console.log('quests', quests)
-	var quest = quests.find(({_id}) => _id.toString() === answer.questId)
-	cl('quest', quest)
-	if (!quest) throw new Error('The question could not be found in function checkIfCorrect()') // for dev
-	return answer.answer === quest.correct_answer
+// TODO: perhaps use index of question instead of finding by id (TODONE for now)
+function checkIfCorrect(answer, quest) {
+	return answer === quest.correct_answer
 }
 
-function getUserQuests(quests) {
+// very raw stages
+function handleGameOver(room) {
+	io.in(room.name).emit('gameCompleted') // TODO: send some stats
+	cl(room.players)
+	cl(`io.sockets.adapter before clients leaving room ${room.name}`, io.sockets.adapter.rooms)
+	delete io.sockets.adapter.rooms[room.name]
+	cl(`io.sockets.adapter.rooms after clients leaving room ${room.name}`, io.sockets.adapter.rooms)
+
+	var roomIdx = gameRooms.findIndex(({name}) => name === room.name) // TODO: try to ensure no duplicates in room names
+	gameRooms.splice(roomIdx, 1)
+}
+
+function getClientQuests(quests) {
 	return quests.map(quest => ({
 		_id: quest._id,
 		quest: quest.question,
@@ -415,6 +433,15 @@ function createRoom() {
 	}
 	gameRooms.push(room)
 	return room
+}
+
+function getEmptyPlayerStats() {
+	return {
+		answeredCurrQuest: false,
+		currQuestPts: 0,
+		totalPts: 0,
+		correctAnswers: 0
+	}
 }
 
 function getRand(size){

@@ -34,11 +34,34 @@
         padding: 30px;
       }
       .answer {
+        position: relative;
         padding: 10px;
         font-size: 1em;
         cursor: pointer;
         border-radius: 8px;
         width: 100%;
+      }
+      .answer.correct {
+        background-color: green;
+      }
+      .answer.wrong {
+        background-color: red;
+      }
+      .answer.my-answer::before {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 10px;
+        border: 5px solid white;
+        border-radius: 20px;
+      }
+      .answer.rival-answer::after {
+        content: '';
+        position: absolute;
+        right: 5px;
+        top: 10px;
+        border: 5px solid black;
+        border-radius: 20px;
       }
     </style>
   </head>
@@ -63,6 +86,8 @@
 
 
       const socket = io();
+      var answerdCurrQuest = false;
+      var currRoundRivalStats = null;
       var myPoints = 0;
       var rivalPoints = 0;
 
@@ -70,8 +95,8 @@
       // var questions = [{question:'What is the capital of Isreal?',a:'tel-aviv',b:'haifa',c:'jerusalem', d:'eilat', correctAnswer: 'jerusalem'}]
       function getQuestTemplate(quest) {
         var questTemplate = `<div class="question-content">${quest.quest}</div><br><hr>`
-        questTemplate += quest.answers.reduce((acc, answer) => {
-          return acc += `<br><div><button onclick="sendAnswer('${answer}', '${quest._id}')" class="answer">${answer}</button></div>`
+        questTemplate += quest.answers.reduce((acc, answer, i) => {
+          return acc += `<br><div><button onclick="sendAnswer('${answer}', ${i})" id="answer-${i}" class="answer">${answer}</button></div>`
         }, '')
         questTemplate += `
           <br>
@@ -80,9 +105,16 @@
         return questTemplate
       }
 
-      function sendAnswer(answer, questId) {
+      function sendAnswer(answer, answerIdx) {
+          if (answerdCurrQuest) return
           console.log('My answer is:', answer)
-          socket.emit('userAnswer', { answer, questId })
+          socket.emit('playerAnswer', { answer, answerIdx })
+      }
+
+      function renderRivalStats({answerIdx, points}) {
+          if (!!points) $(`#answer-${answerIdx}`).addClass('correct rival-answer')
+          else $(`#answer-${answerIdx}`).addClass('wrong rival-answer')
+          $('.rival .points').text(rivalPoints)
       }
 
       //  $('form').submit(function(){
@@ -97,22 +129,31 @@
         // var playingInRoom = null;
 
         socket.on('waitingForOpponent', _=> console.log('Waiting for opponent'))
-        socket.on('startGame', (game)=> {
-              // playingInRoom = game.room;
+        socket.on('nextRound', (quest)=> {
+              answerdCurrQuest = false;
+              currRoundRivalStats = null;
               console.log('can start game')
-              console.log('room name: ', game.room)
-              console.log('questions: ', game.quests)
-              $('.play-area').text(game.room)
-              $('.question-container').html(getQuestTemplate(game.quests[0]))
-              // $('.question-content').html(`question id: ${game.quests[0]._id}`)
-              // $('.user-answer').val(`${game.quests[0].answers}`)
+              $('.question-container').html(getQuestTemplate(quest))
             }
         )
 
-        socket.on('rivalAnswer', answer => {
-          rivalPoints += answer.points
-          $('.rival-answer').text(`Rival answered: ${answer.answer}`)
-          $('.rival .points').text(rivalPoints)
+        socket.on('answerProcessed', ({ answerIdx, points }) => {
+          console.log('answerProcessed event occured')
+          console.log('answerIdx:', answerIdx)
+          console.log('points:', points)
+          if (!!points) $(`#answer-${answerIdx}`).addClass('correct my-answer')
+          else $(`#answer-${answerIdx}`).addClass('wrong my-answer')
+          myPoints += points
+          $('.myself .points').text(myPoints)
+          answerdCurrQuest = true;
+          if (currRoundRivalStats) renderRivalStats(currRoundRivalStats)
+        })
+
+        socket.on('rivalAnswer', (rivalStats) => {
+          console.log('rivalStats:', rivalStats)
+          rivalPoints  += rivalStats.points
+          if (answerdCurrQuest) renderRivalStats(rivalStats)
+          else currRoundRivalStats = rivalStats
         })
 
 
