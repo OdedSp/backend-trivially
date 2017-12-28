@@ -1,4 +1,3 @@
-// import { forEachOf } from '../../../../Users/Sidney/AppData/Local/Microsoft/TypeScript/2.6/node_modules/@types/async';
 
 // Minimal Simple REST API Handler (With MongoDB and Socket.io)
 // Plus support for simple login and session
