@@ -322,7 +322,7 @@ io.on('connection', function (socket) {
 		if (correct) points = 100
 		playerStats.currQuestPts = points
 		playerStats.totalPts += points
-	
+		
 		socket.emit('answerProcessed', { answerIdx: answer.answerIdx, points })
 
 		socket.in(room.name).emit('rivalAnswer', { answerIdx: answer.answerIdx, points })
