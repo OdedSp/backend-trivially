@@ -6,8 +6,6 @@
 
 'use strict';
 
-// var  mockQuests = require('./mockData.json')
-
 var cl = console.log;
 
 const express = require('express'),
@@ -64,11 +62,6 @@ function dbConnect() {
 	});
 }
 
-// dbConnect().
-// then(db => {
-// 	const collection = db.collection('quest');
-// 	collection.insertMany(mockQuests)
-// })
 
 
 var objTypeRequiresUser = {
@@ -279,170 +272,159 @@ http.listen(3003, function () {
 });
 
 
-const gameRooms = []
+// dbConnect().
+// then(db => {
+	// 	const collection = db.collection('quest');
+	// 	cl('mockQuests.length', mockQuests.length)
+	// 	collection.insertMany(mockQuests)
+	// })
+	
+	
+	const TriviaService = require('./services/TriviaService')
+	
+	let botMode = true
+	
+	io.on('connection', function (socket) {
+		var room = null
 
-let botMode = true
+		socket.on('joinGameRoom', (user) => {
+			room = TriviaService.getRoom(socket.id, user)
+			cl({room})
+			socket.join(room.name)
+			if (room.players.length === 1) {
+				socket.emit('waitingForOpponent')
+				if (botMode) require('./triviaRivalBot')()
+			}
+			else {
+				getQuestionSet(5)
+				.then(quests => {
+					room.quests = quests // same room pointer in both sockets so this works
+					var currQuest = room.quests[room.currQuestIdx]
 
-io.on('connection', function (socket) {
-	var room = null
-	var currQuest = {
-		quest: null,
-		answerCount: 0
-	}
-	// var rivalId = null
-	socket.on('joinGameRoom', _ => {
-		room = getRoom()
-		cl(room)
-		socket.join(room.name)
-		room.players[socket.id] = getEmptyPlayerStats()
-		if (room.connections === 1) {
-			socket.emit('waitingForOpponent')
-			if (botMode) require('./triviaRivalBot')()
-		}
-		else {
-			getQuestionSet(5)
-			.then(quests => {
-				// cl(quests)
-				room.quests = quests
-				room.clientQuests = getClientQuests(quests)
-				// var questsForUser = getUserQuests(quests)
-				// io.in(room.name).emit('startGame', {room: room.name, quests: questsForUser})
-				io.in(room.name).emit('nextRound', room.clientQuests[room.currTurn.questIdx])
-			})
-			.catch(err => console.log(err))
-		}
-	})
-
-	socket.on('playerAnswer',(answer) => {
-		cl('player answered:', answer)
-		var correct = checkIfCorrect(answer.answer, room.quests[room.currTurn.questIdx])
-		var playerStats = room.players[socket.id]
-		var points = 0
-		if (correct) points = 100
-		playerStats.currQuestPts = points
-		playerStats.totalPts += points
+					var player = room.players.find(({ socketId }) => socketId === socket.id)
+					var rival = room.players.find(({ socketId }) => socketId !== socket.id)
+					var userQuest = TriviaService.getUserQuest(currQuest)
+					
+					socket.emit('firstRound', { quest: userQuest, rival })
+					socket.in(room.name).emit('firstRound', { quest: userQuest, player })
+				})
+				.catch(err => cl(err))
+			}
+		})
 		
-		socket.emit('answerProcessed', { answerIdx: answer.answerIdx, points })
+		socket.on('playerAnswer',({ answerId, answerTime }) => {
+			cl('player answerId:', answerId)
+			cl('player answerTime:', answerTime)
+			var currQuest = room.quests[room.currQuestIdx]
+			var points = 0
 
-		socket.in(room.name).emit('rivalAnswer', { answerIdx: answer.answerIdx, points })
+			if (answerId === currQuest.correctAnswerId) {
+				points = 100 - 2 * Math.floor(answerTime / 500)
+				points = Math.max(points, 10)
+			}
 
-		if (++room.currTurn.answerCount === room.connections) {
-			var questIdx = ++room.currTurn.questIdx
-			room.currTurn.answerCount = 0
-			setTimeout(_=> {
-				room.quests.length !== questIdx
-				? io.in(room.name).emit('nextRound', room.clientQuests[questIdx])
-				// : io.in(room.name).emit('gameCompleted') // TODO: write handleGameOver()
-				: handleGameOver(room)
-			}, 3000)
-		}
-	})
-	
-
-
-	// var randUserName = getRand(5)
-	console.log('a user connected');
-	socket.on('disconnect', function () {
-		console.log('user disconnected')
-		// io.in(room.name).emit('opponentLeft')
-	});
-});
-
-cl('WebSocket is Ready');
-
-//******************** Functions used in the trivia socket connection ************************//
-
-// gets a set of questions
-function getQuestionSet(count) {
-	var collectionName = 'quest'
-	// var query = {}
-	return new Promise((resolve, reject) => {
-		dbConnect().then(db => {
-			const collection = db.collection(collectionName);
-	
-			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
-				if (err) {
-					reject('Cannot get you a list of ', err)
-				} else {
-					cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
-					resolve(objs);
-				}
-				db.close();
-			});
+			room.players.find(({ socketId }) => socketId === socket.id)
+			.answers.push({
+				questId: currQuest._id, // (.toString()?)
+				points,
+				answerTime,
+				answerId
+			})
+			
+			socket.emit('answerProcessed', points)
+			
+			socket.in(room.name).emit('rivalAnswer', { answerId, points })
+			
+			if (room.players.every(({ answers }) => answers.length === room.currQuestIdx + 1)) {
+				io.in(room.name).emit('answerWas', currQuest.correctAnswerId)
+				currQuest = room.quests[++room.currQuestIdx]
+				
+				setTimeout(_=> {
+					currQuest
+					? io.in(room.name).emit('nextRound', TriviaService.getUserQuest(currQuest))
+					: TriviaService.handleGameOver(room, io)
+				}, 3000)
+			
+			}
+		})
+		
+		
+		
+		// var randUserName = getRand(5)
+		console.log('a user connected');
+		socket.on('disconnect', function () {
+			console.log('user disconnected')
+			// io.in(room.name).emit('opponentLeft')
 		});
-	})
-}
-
-// TODO: perhaps use index of question instead of finding by id (TODONE for now)
-function checkIfCorrect(answer, quest) {
-	return answer === quest.correct_answer
-}
-
-// very raw stages
-function handleGameOver(room) {
-	io.in(room.name).emit('gameCompleted') // TODO: send some stats
-	cl(room.players)
-	cl(`io.sockets.adapter before clients leaving room ${room.name}`, io.sockets.adapter.rooms)
-	delete io.sockets.adapter.rooms[room.name]
-	cl(`io.sockets.adapter.rooms after clients leaving room ${room.name}`, io.sockets.adapter.rooms)
-
-	var roomIdx = gameRooms.findIndex(({name}) => name === room.name) // TODO: try to ensure no duplicates in room names
-	gameRooms.splice(roomIdx, 1)
-}
-
-function getClientQuests(quests) {
-	return quests.map(quest => ({
-		_id: quest._id,
-		quest: quest.question,
-		answers: getShuffledAnswers(quest),
-		category: quest.category,
-		type: quest.type
-	}))
-}
-
-function getShuffledAnswers(quest) {
-	var answers = [];
-	for (let i = 0; i < quest.incorrect_answers.length; i++) {
-	  answers.push(quest.incorrect_answers[i]);
-	}
-	answers.push(quest.correct_answer);
+	});
 	
-	for (let i = answers.length - 1; i > 0; i--) {
-	  let j = Math.floor(Math.random() * (i + 1));
-	  [answers[i], answers[j]] = [answers[j], answers[i]];
+	cl('WebSocket is Ready');
+	
+	//******************** Functions used in the trivia socket connection ************************//
+	
+	// gets a set of questions
+	function getQuestionSet(count) {
+		var collectionName = 'quest'
+		// var query = {}
+		return new Promise((resolve, reject) => {
+			dbConnect().then(db => {
+				const collection = db.collection(collectionName);
+				
+				collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
+					if (err) {
+						reject('Cannot get you a list of ', err)
+					} else {
+						cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
+						resolve(objs);
+					}
+					db.close();
+				});
+			});
+		})
 	}
-	return answers
-  }
+	
+	
+	//**** in order to save 1200 trivia questions to DB, take the following code out of comment ****//
+	//**** (use 'node server-full', not 'nodemon', to ensure DB does not get duplicate documents) ****/
 
-function getRoom() {
-	var room = gameRooms.find(({connections}) => connections === 1) || createRoom()
-	room.connections++
-	return room
-}
-
-function createRoom() {
-	var room = {
-		name: getRand(5),
-		connections: 0,
-		players: {},
-		currTurn: {
-			questIdx: 0,
-			answerCount: 0
-		}
-	}
-	gameRooms.push(room)
-	return room
-}
-
-function getEmptyPlayerStats() {
-	return {
-		answeredCurrQuest: false,
-		currQuestPts: 0,
-		totalPts: 0,
-		correctAnswers: 0
-	}
-}
-
-function getRand(size){
-	return Math.random().toString(36).substring(2,2+size)
-}
+	// var mockQuests = require('./mockData.json')
+	// cl('quests.length:', mockQuests.length)
+	// mockQuests = mockQuests.map(quest => ({
+	// 	txt: quest.question,
+	// 	category: quest.category,
+	// 	type: quest.type,
+	// 	difficulty: quest.difficulty,
+	// 	...getAnswersData(quest),
+	// 	answeredCorrectlyCount: 0,
+	// 	answeredIncorrectlyCount: 0
+	// }))
+	// cl('quests.length:', mockQuests.length)
+	
+	// function getAnswersData(quest) {
+	// 	var answers = []
+	// 	var ids = Array.from({length: 100}, (ud, i) => i + 1)
+		
+	// 	var correctAnswerId = ids.splice(getRandNum(ids.length), 1)[0]
+	// 	answers.push({
+	// 		txt: quest.correct_answer,
+	// 		id: correctAnswerId
+	// 	})
+		
+	// 	quest.incorrect_answers.forEach(answer => {
+	// 		answers.push({
+	// 			txt: answer,
+	// 			id: ids.splice(getRandNum(ids.length), 1)[0]
+	// 		})
+	// 	})
+	
+	// 	answers.sort((a, b) => a.id - b.id)
+	
+	// 	return {
+	// 		correctAnswerId,
+	// 		answers
+	// 	}
+	// }
+	
+	// function getRandNum(max) {
+	// 	return Math.floor(Math.random() * max)
+	// }

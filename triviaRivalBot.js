@@ -1,5 +1,11 @@
 
-// var currQuest = null
+const sendAnswer = (quest, socket) => {
+    var answerIdx = Math.floor(Math.random() * quest.answers.length)
+    var answerId = quest.answers[answerIdx].id
+
+    var delay = (Math.random() * 2000) + 500
+    setTimeout(_=> socket.emit('playerAnswer', { answerId, answerTime: delay }), delay)
+}
 
 const initiateBot = () => {
     var socket = require('socket.io-client')('http://localhost:3003')
@@ -8,12 +14,12 @@ const initiateBot = () => {
     
     socket.emit('joinGameRoom')
 
-    socket.on('nextRound', quest => {
-        var answerIdx = Math.floor(Math.random() * quest.answers.length)
-        var answer = quest.answers[answerIdx]
+    socket.on('firstRound', ({ quest }) => {
+        sendAnswer(quest, socket)
+    })
 
-        var delay = (Math.random() * 2000) + 500
-        setTimeout(_=> socket.emit('playerAnswer', {answer, answerIdx}), delay)
+    socket.on('nextRound', quest => {
+        sendAnswer(quest, socket)
     })
 
     socket.on('gameCompleted', _=> socket.disconnect())

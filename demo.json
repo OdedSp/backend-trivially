@@ -1,0 +1,34 @@
+{
+    "startedAt": "timestamp",
+    "playersMap": {
+        "SOKECTID": {
+            "userId": "_id mongo id",
+            "userName": "",
+            "answers" : [
+                {
+                    "questId": "mongo id",
+                    "points": "score",
+                    "duration": "milliseconds",
+                    "answerId": "the answer id"
+                }
+            ]
+        }
+    },
+    "quests": [
+        {
+            "txt": "the quest itself",
+            "rightAnswerId": "id",
+            "answers": [
+                {
+                    "txt": "the answer itself",
+                    "id": "maybe the place in the array"
+                }
+            ],
+            "category": "genere",
+            "questId" : "_id - mongo id",
+            "difficulty" : "hard",
+            "rightAnswerCount": "number",
+            "wrongAnswerCount": "number"
+        }
+    ]
+}  
