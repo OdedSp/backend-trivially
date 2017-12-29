@@ -15,6 +15,7 @@ function _createRoom() {
 		createdAt: Date.now(),
 		players: [],
 		quests: null,
+		answerCounters: [],
 		currQuestIdx: 0
 	}
 	gameRooms.push(room) // maybe use unshift to make finding a room a little more efficient
@@ -31,12 +32,12 @@ function _createPlayer(socketId, user) {
 	}
 }
 
-function checkIfCorrect(answer, quest) {
-	return answer === quest.correct_answer
-}
+// function checkIfCorrect(answer, quest) {
+// 	return answer === quest.correct_answer
+// }
 
 // very raw stages
-function handleGameOver(room, io) {
+function handleGameOver(room, io, dbConnect) {
 	io.in(room.name).emit('gameCompleted') // TODO: send some stats
 	cl(room.players)
 	cl(`io.sockets.adapter before clients leaving room ${room.name}`, io.sockets.adapter.rooms)
@@ -45,12 +46,59 @@ function handleGameOver(room, io) {
 
 	var roomIdx = gameRooms.findIndex(({name}) => name === room.name) // TODO: try to ensure no duplicates in room names
 	gameRooms.splice(roomIdx, 1)
+
+	_updateQuestAnswerCounters(room.answerCounters, dbConnect)
 }
 
 function getUserQuest(quest) {
 	var userQuest = {...quest}
 	delete userQuest.correctAnswerId
 	return userQuest
+}
+
+function createAnswerCounter(questId) {
+	return {
+		questId,
+		correctCount: 0,
+		incorrectCount: 0
+	}
+}
+
+function getQuestionSet(count, dbConnect) {
+	var collectionName = 'quest'
+	// var query = {}
+	return new Promise((resolve, reject) => {
+		dbConnect().then(db => {
+			const collection = db.collection(collectionName);
+			
+			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
+				if (err) {
+					reject('Cannot get you a list of ', err)
+				} else {
+					cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
+					resolve(objs);
+				}
+				db.close();
+			});
+		});
+	})
+}
+
+function _updateQuestAnswerCounters(answerCounters, dbConnect) {
+	// return new Promise((resolve, reject) => {
+	return dbConnect().then(db => {
+		const collection = db.collection('quest')
+		const writePrms = answerCounters.map(counter => {
+			return collection.update({_id: counter.questId},
+			{$inc: {
+				answeredCorrectlyCount: counter.correctCount,
+				answeredIncorrectlyCount: counter.incorrectCount
+			}})
+		})
+		return Promise.all(writePrms)
+		.then(writeResults => cl({writeResults}))
+	})
+	// })
 }
 
 // // TODO: get rid of this
@@ -64,19 +112,19 @@ function getUserQuest(quest) {
 // 	}))
 // }
 
-function getShuffledAnswers(quest) {
-	var answers = [];
-	for (let i = 0; i < quest.incorrect_answers.length; i++) {
-	  answers.push(quest.incorrect_answers[i]);
-	}
-	answers.push(quest.correct_answer);
+// function getShuffledAnswers(quest) {
+// 	var answers = [];
+// 	for (let i = 0; i < quest.incorrect_answers.length; i++) {
+// 	  answers.push(quest.incorrect_answers[i]);
+// 	}
+// 	answers.push(quest.correct_answer);
 	
-	for (let i = answers.length - 1; i > 0; i--) {
-	  let j = Math.floor(Math.random() * (i + 1));
-	  [answers[i], answers[j]] = [answers[j], answers[i]];
-	}
-	return answers
-  }
+// 	for (let i = answers.length - 1; i > 0; i--) {
+// 	  let j = Math.floor(Math.random() * (i + 1));
+// 	  [answers[i], answers[j]] = [answers[j], answers[i]];
+// 	}
+// 	return answers
+//   }
 
 
 
@@ -94,8 +142,9 @@ function _getRand(size){
 }
 
 module.exports = {
-    getRoom,
-    getUserQuest,
-    checkIfCorrect,
+	getRoom,
+	getQuestionSet,
+	getUserQuest,
+	createAnswerCounter,
     handleGameOver
 }

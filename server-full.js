@@ -296,10 +296,11 @@ http.listen(3003, function () {
 				if (botMode) require('./triviaRivalBot')()
 			}
 			else {
-				getQuestionSet(5)
+				TriviaService.getQuestionSet(5, dbConnect)
 				.then(quests => {
 					room.quests = quests // same room pointer in both sockets so this works
 					var currQuest = room.quests[room.currQuestIdx]
+					room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
 
 					var player = room.players.find(({ socketId }) => socketId === socket.id)
 					var rival = room.players.find(({ socketId }) => socketId !== socket.id)
@@ -321,7 +322,8 @@ http.listen(3003, function () {
 			if (answerId === currQuest.correctAnswerId) {
 				points = 100 - 2 * Math.floor(answerTime / 500)
 				points = Math.max(points, 10)
-			}
+				room.answerCounters[room.currQuestIdx].correctCount++
+			} else room.answerCounters[room.currQuestIdx].incorrectCount++
 
 			room.players.find(({ socketId }) => socketId === socket.id)
 			.answers.push({
@@ -340,9 +342,10 @@ http.listen(3003, function () {
 				currQuest = room.quests[++room.currQuestIdx]
 				
 				setTimeout(_=> {
-					currQuest
-					? io.in(room.name).emit('nextRound', TriviaService.getUserQuest(currQuest))
-					: TriviaService.handleGameOver(room, io)
+					if (currQuest) {
+						room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
+						io.in(room.name).emit('nextRound', TriviaService.getUserQuest(currQuest))
+					} else TriviaService.handleGameOver(room, io, dbConnect)
 				}, 3000)
 			
 			}
@@ -363,29 +366,45 @@ http.listen(3003, function () {
 	//******************** Functions used in the trivia socket connection ************************//
 	
 	// gets a set of questions
-	function getQuestionSet(count) {
-		var collectionName = 'quest'
-		// var query = {}
-		return new Promise((resolve, reject) => {
-			dbConnect().then(db => {
-				const collection = db.collection(collectionName);
+	// function getQuestionSet(count) {
+	// 	var collectionName = 'quest'
+	// 	// var query = {}
+	// 	return new Promise((resolve, reject) => {
+	// 		dbConnect().then(db => {
+	// 			const collection = db.collection(collectionName);
 				
-				collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
-					if (err) {
-						reject('Cannot get you a list of ', err)
-					} else {
-						cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
-						resolve(objs);
-					}
-					db.close();
-				});
-			});
-		})
-	}
+	// 			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
+	// 				if (err) {
+	// 					reject('Cannot get you a list of ', err)
+	// 				} else {
+	// 					cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
+	// 					resolve(objs);
+	// 				}
+	// 				db.close();
+	// 			});
+	// 		});
+	// 	})
+	// }
+
+	// function updateQuestAnswerCounters(answerCounters) {
+	// 	return new promise((resolve, reject) => {
+	// 		db.connect().then(db => {
+	// 			const collection = db.collection('quest')
+	// 			answerCounters.forEach(counter => {
+	// 				let writeRes = collection.update({_id: conter.questId},
+	// 				{$inc: {
+	// 					answeredCorrectlyCount: counter.correctCount,
+	// 					answeredIncorrectlyCount: counter.incorrectCount
+	// 				}})
+	// 				cl({writeRes})
+	// 			})
+	// 		})
+	// 	})
+	// }
 	
 	
 	//**** in order to save 1200 trivia questions to DB, take the following code out of comment ****//
-	//**** (use 'node server-full', not 'nodemon', to ensure DB does not get duplicate documents) ****/
+	//**** (use 'node server-full', not 'nodemon', to ensure DB does not save duplicate documents) ****/
 
 	// var mockQuests = require('./mockData.json')
 	// cl('quests.length:', mockQuests.length)
