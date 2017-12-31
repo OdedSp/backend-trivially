@@ -271,179 +271,181 @@ http.listen(3003, function () {
 
 });
 
+module.exports = dbConnect
+	
+	
+const TriviaService = require('./services/TriviaService')
+
+let botMode = true
+
+io.on('connection', function (socket) {
+	cl('a user connected');
+	var room = null
+
+	socket.on('joinGameRoom', (user) => {
+		// TriviaService.getRoom(socket.id, user)
+		// .then(res => {
+		// 	room = res
+		// })
+		room = TriviaService.getRoom(socket.id, user)
+		cl({room})
+		socket.join(room.name)
+		if (room.players.length === 1) {
+			socket.emit('waitingForOpponent')
+			if (botMode) require('./triviaRivalBot')()
+		} else {
+			TriviaService.getQuestionSet(5, dbConnect)
+			.then(quests => {
+				room.quests = quests // same room pointer in both sockets so this works
+				var currQuest = room.quests[room.currQuestIdx]
+				room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
+
+				var player = room.players.find(({ socketId }) => socketId === socket.id)
+				var rival = room.players.find(({ socketId }) => socketId !== socket.id)
+				var userQuest = TriviaService.getUserQuest(currQuest)
+				
+				socket.emit('firstRound', { quest: userQuest, rival })
+				socket.in(room.name).emit('firstRound', { quest: userQuest, player })
+			})
+			.catch(err => cl(err))
+		}
+	})
+	
+	socket.on('playerAnswer',({ answerId, answerTime }) => {
+		cl('player answerId:', answerId)
+		cl('player answerTime:', answerTime)
+		var currQuest = room.quests[room.currQuestIdx]
+		var points = 0
+
+		if (answerId === currQuest.correctAnswerId) {
+			points = 100 - 2 * Math.floor(answerTime / 500)
+			points = Math.max(points, 10)
+			room.answerCounters[room.currQuestIdx].correctCount++
+		} else room.answerCounters[room.currQuestIdx].incorrectCount++
+
+		room.players.find(({ socketId }) => socketId === socket.id)
+		.answers.push({
+			questId: currQuest._id, // (.toString()?)
+			points,
+			answerTime,
+			answerId
+		})
+		
+		socket.emit('answerProcessed', points)
+		
+		socket.in(room.name).emit('rivalAnswer', { answerId, points })
+		
+		if (room.players.every(({ answers }) => answers.length === room.currQuestIdx + 1)) {
+			io.in(room.name).emit('answerWas', currQuest.correctAnswerId)
+			currQuest = room.quests[++room.currQuestIdx]
+			
+			setTimeout(_=> {
+				if (currQuest) {
+					room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
+					io.in(room.name).emit('nextRound', TriviaService.getUserQuest(currQuest))
+				} else TriviaService.handleGameOver(room, io, dbConnect)
+			}, 3000)
+		
+		}
+	})
+	
+	socket.on('disconnect', function () {
+		cl('user disconnected')
+		// io.in(room.name).emit('rivalLeft')
+		// TriviaService.handleGameOver(room, io, dbConnect)
+	});
+});
+
+cl('WebSocket is Ready');
+
+//******************** Functions used in the trivia socket connection ************************//
+
+// gets a set of questions
+// function getQuestionSet(count) {
+// 	var collectionName = 'quest'
+// 	// var query = {}
+// 	return new Promise((resolve, reject) => {
+// 		dbConnect().then(db => {
+// 			const collection = db.collection(collectionName);
+			
+// 			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
+// 				if (err) {
+// 					reject('Cannot get you a list of ', err)
+// 				} else {
+// 					cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
+// 					resolve(objs);
+// 				}
+// 				db.close();
+// 			});
+// 		});
+// 	})
+// }
+
+// function updateQuestAnswerCounters(answerCounters) {
+// 	return new promise((resolve, reject) => {
+// 		db.connect().then(db => {
+// 			const collection = db.collection('quest')
+// 			answerCounters.forEach(counter => {
+// 				let writeRes = collection.update({_id: conter.questId},
+// 				{$inc: {
+// 					answeredCorrectlyCount: counter.correctCount,
+// 					answeredIncorrectlyCount: counter.incorrectCount
+// 				}})
+// 				cl({writeRes})
+// 			})
+// 		})
+// 	})
+// }
+
+
+//**** in order to save 1200 trivia questions to DB, take the following code out of comment ****//
+//**** (use 'node server-full', not 'nodemon', to ensure DB does not save duplicate documents) ****/
+
+// var mockQuests = require('./mockData.json')
+// cl('quests.length:', mockQuests.length)
+// mockQuests = mockQuests.map(quest => ({
+// 	txt: quest.question,
+// 	category: quest.category,
+// 	type: quest.type,
+// 	difficulty: quest.difficulty,
+// 	...getAnswersData(quest),
+// 	answeredCorrectlyCount: 0,
+// 	answeredIncorrectlyCount: 0
+// }))
+// cl('quests.length:', mockQuests.length)
+
+// function getAnswersData(quest) {
+// 	var answers = []
+// 	var ids = Array.from({length: 100}, (ud, i) => i + 1)
+	
+// 	var correctAnswerId = ids.splice(getRandNum(ids.length), 1)[0]
+// 	answers.push({
+// 		txt: quest.correct_answer,
+// 		id: correctAnswerId
+// 	})
+	
+// 	quest.incorrect_answers.forEach(answer => {
+// 		answers.push({
+// 			txt: answer,
+// 			id: ids.splice(getRandNum(ids.length), 1)[0]
+// 		})
+// 	})
+
+// 	answers.sort((a, b) => a.id - b.id)
+
+// 	return {
+// 		correctAnswerId,
+// 		answers
+// 	}
+// }
+
+// function getRandNum(max) {
+// 	return Math.floor(Math.random() * max)
+// }
 
 // dbConnect().
 // then(db => {
-	// 	const collection = db.collection('quest');
-	// 	cl('mockQuests.length', mockQuests.length)
-	// 	collection.insertMany(mockQuests)
-	// })
-	
-	
-	const TriviaService = require('./services/TriviaService')
-	
-	let botMode = true
-	
-	io.on('connection', function (socket) {
-		var room = null
-
-		socket.on('joinGameRoom', (user) => {
-			room = TriviaService.getRoom(socket.id, user)
-			cl({room})
-			socket.join(room.name)
-			if (room.players.length === 1) {
-				socket.emit('waitingForOpponent')
-				if (botMode) require('./triviaRivalBot')()
-			}
-			else {
-				TriviaService.getQuestionSet(5, dbConnect)
-				.then(quests => {
-					room.quests = quests // same room pointer in both sockets so this works
-					var currQuest = room.quests[room.currQuestIdx]
-					room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
-
-					var player = room.players.find(({ socketId }) => socketId === socket.id)
-					var rival = room.players.find(({ socketId }) => socketId !== socket.id)
-					var userQuest = TriviaService.getUserQuest(currQuest)
-					
-					socket.emit('firstRound', { quest: userQuest, rival })
-					socket.in(room.name).emit('firstRound', { quest: userQuest, player })
-				})
-				.catch(err => cl(err))
-			}
-		})
-		
-		socket.on('playerAnswer',({ answerId, answerTime }) => {
-			cl('player answerId:', answerId)
-			cl('player answerTime:', answerTime)
-			var currQuest = room.quests[room.currQuestIdx]
-			var points = 0
-
-			if (answerId === currQuest.correctAnswerId) {
-				points = 100 - 2 * Math.floor(answerTime / 500)
-				points = Math.max(points, 10)
-				room.answerCounters[room.currQuestIdx].correctCount++
-			} else room.answerCounters[room.currQuestIdx].incorrectCount++
-
-			room.players.find(({ socketId }) => socketId === socket.id)
-			.answers.push({
-				questId: currQuest._id, // (.toString()?)
-				points,
-				answerTime,
-				answerId
-			})
-			
-			socket.emit('answerProcessed', points)
-			
-			socket.in(room.name).emit('rivalAnswer', { answerId, points })
-			
-			if (room.players.every(({ answers }) => answers.length === room.currQuestIdx + 1)) {
-				io.in(room.name).emit('answerWas', currQuest.correctAnswerId)
-				currQuest = room.quests[++room.currQuestIdx]
-				
-				setTimeout(_=> {
-					if (currQuest) {
-						room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
-						io.in(room.name).emit('nextRound', TriviaService.getUserQuest(currQuest))
-					} else TriviaService.handleGameOver(room, io, dbConnect)
-				}, 3000)
-			
-			}
-		})
-		
-		
-		
-		// var randUserName = getRand(5)
-		console.log('a user connected');
-		socket.on('disconnect', function () {
-			console.log('user disconnected')
-			// io.in(room.name).emit('opponentLeft')
-		});
-	});
-	
-	cl('WebSocket is Ready');
-	
-	//******************** Functions used in the trivia socket connection ************************//
-	
-	// gets a set of questions
-	// function getQuestionSet(count) {
-	// 	var collectionName = 'quest'
-	// 	// var query = {}
-	// 	return new Promise((resolve, reject) => {
-	// 		dbConnect().then(db => {
-	// 			const collection = db.collection(collectionName);
-				
-	// 			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
-	// 				if (err) {
-	// 					reject('Cannot get you a list of ', err)
-	// 				} else {
-	// 					cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
-	// 					resolve(objs);
-	// 				}
-	// 				db.close();
-	// 			});
-	// 		});
-	// 	})
-	// }
-
-	// function updateQuestAnswerCounters(answerCounters) {
-	// 	return new promise((resolve, reject) => {
-	// 		db.connect().then(db => {
-	// 			const collection = db.collection('quest')
-	// 			answerCounters.forEach(counter => {
-	// 				let writeRes = collection.update({_id: conter.questId},
-	// 				{$inc: {
-	// 					answeredCorrectlyCount: counter.correctCount,
-	// 					answeredIncorrectlyCount: counter.incorrectCount
-	// 				}})
-	// 				cl({writeRes})
-	// 			})
-	// 		})
-	// 	})
-	// }
-	
-	
-	//**** in order to save 1200 trivia questions to DB, take the following code out of comment ****//
-	//**** (use 'node server-full', not 'nodemon', to ensure DB does not save duplicate documents) ****/
-
-	// var mockQuests = require('./mockData.json')
-	// cl('quests.length:', mockQuests.length)
-	// mockQuests = mockQuests.map(quest => ({
-	// 	txt: quest.question,
-	// 	category: quest.category,
-	// 	type: quest.type,
-	// 	difficulty: quest.difficulty,
-	// 	...getAnswersData(quest),
-	// 	answeredCorrectlyCount: 0,
-	// 	answeredIncorrectlyCount: 0
-	// }))
-	// cl('quests.length:', mockQuests.length)
-	
-	// function getAnswersData(quest) {
-	// 	var answers = []
-	// 	var ids = Array.from({length: 100}, (ud, i) => i + 1)
-		
-	// 	var correctAnswerId = ids.splice(getRandNum(ids.length), 1)[0]
-	// 	answers.push({
-	// 		txt: quest.correct_answer,
-	// 		id: correctAnswerId
-	// 	})
-		
-	// 	quest.incorrect_answers.forEach(answer => {
-	// 		answers.push({
-	// 			txt: answer,
-	// 			id: ids.splice(getRandNum(ids.length), 1)[0]
-	// 		})
-	// 	})
-	
-	// 	answers.sort((a, b) => a.id - b.id)
-	
-	// 	return {
-	// 		correctAnswerId,
-	// 		answers
-	// 	}
-	// }
-	
-	// function getRandNum(max) {
-	// 	return Math.floor(Math.random() * max)
-	// }
+// 	const collection = db.collection('quest');
+// 	cl('mockQuests.length', mockQuests.length)
+// 	collection.insertMany(mockQuests)
+// })

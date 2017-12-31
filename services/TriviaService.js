@@ -1,4 +1,5 @@
 const cl = console.log
+const dbConnect = require('../server-full')
 
 const gameRooms = []
 
@@ -37,7 +38,7 @@ function _createPlayer(socketId, user) {
 // }
 
 // very raw stages
-function handleGameOver(room, io, dbConnect) {
+function handleGameOver(room, io) {
 	io.in(room.name).emit('gameCompleted') // TODO: send some stats
 	cl(room.players)
 	cl(`io.sockets.adapter before clients leaving room ${room.name}`, io.sockets.adapter.rooms)
@@ -64,7 +65,7 @@ function createAnswerCounter(questId) {
 	}
 }
 
-function getQuestionSet(count, dbConnect) {
+function getQuestionSet(count) {
 	var collectionName = 'quest'
 	// var query = {}
 	return new Promise((resolve, reject) => {
