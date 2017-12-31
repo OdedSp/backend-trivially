@@ -154,6 +154,7 @@ app.delete('/data/:objType/:id', function (req, res) {
 });
 
 // POST - adds game statistic
+// upload.single('file') was removed
 app.post('/data/statistic', function (req, res) {
 	
 		const objType = 'statistic';
