@@ -57,8 +57,7 @@ console.log(myDbConnect)
 
 
 var objTypeRequiresUser = {
-	quest: true,
-	statistic: true
+	// quest: true
 }
 // This function is called by all REST end-points to take care
 // setting the basic mongo query:
@@ -323,28 +322,61 @@ http.listen(3003, function () {
 
 const gameRooms = []
 
+let botMode = true
 
 io.on('connection', function (socket) {
 	var room = null
+	var currQuest = {
+		quest: null,
+		answerCount: 0
+	}
+	// var rivalId = null
 	socket.on('joinGameRoom', _ => {
 		room = getRoom()
-		console.log(room)
+		cl(room)
 		socket.join(room.name)
-		if (room.connections === 1) socket.emit('waitingForOpponent')
+		room.players[socket.id] = getEmptyPlayerStats()
+		if (room.connections === 1) {
+			socket.emit('waitingForOpponent')
+			if (botMode) require('./triviaRivalBot')()
+		}
 		else {
-			getQuestionSet()
+			getQuestionSet(5)
 			.then(quests => {
-				room.quests = quests.slice(0, 10)
-				io.in(room.name).emit('startGame', room)	
+				// cl(quests)
+				room.quests = quests
+				room.clientQuests = getClientQuests(quests)
+				// var questsForUser = getUserQuests(quests)
+				// io.in(room.name).emit('startGame', {room: room.name, quests: questsForUser})
+				io.in(room.name).emit('nextRound', room.clientQuests[room.currTurn.questIdx])
 			})
 			.catch(err => console.log(err))
 		}
 	})
 
-	socket.on('userAnswer',(answer) =>{
-		socket.emit('processedAnswer',processedAnswerResult(room,answer)) //sending the calculated points back to the client who sent the answer, and only to him
-		answer.rivalPoints = processedAnswerResult(room,answer) 
-		socket.in(room.name).emit('rivalAnswer',answer) //sending the answer to the user's rival, and only to him
+	socket.on('playerAnswer',(answer) => {
+		cl('player answered:', answer)
+		var correct = checkIfCorrect(answer.answer, room.quests[room.currTurn.questIdx])
+		var playerStats = room.players[socket.id]
+		var points = 0
+		if (correct) points = 100
+		playerStats.currQuestPts = points
+		playerStats.totalPts += points
+	
+		socket.emit('answerProcessed', { answerIdx: answer.answerIdx, points })
+
+		socket.in(room.name).emit('rivalAnswer', { answerIdx: answer.answerIdx, points })
+
+		if (++room.currTurn.answerCount === room.connections) {
+			var questIdx = ++room.currTurn.questIdx
+			room.currTurn.answerCount = 0
+			setTimeout(_=> {
+				room.quests.length !== questIdx
+				? io.in(room.name).emit('nextRound', room.clientQuests[questIdx])
+				// : io.in(room.name).emit('gameCompleted') // TODO: write handleGameOver()
+				: handleGameOver(room)
+			}, 3000)
+		}
 	})
 	
 
@@ -357,16 +389,19 @@ io.on('connection', function (socket) {
 	});
 });
 
+cl('WebSocket is Ready');
+
+//******************** Functions used in the trivia socket connection ************************//
 
 // gets a set of questions
-function getQuestionSet (){
+function getQuestionSet(count) {
 	var collectionName = 'quest'
-	var query = {}
+	// var query = {}
 	return new Promise((resolve, reject) => {
 		myDbConnect().then(db => {
 			const collection = db.collection(collectionName);
 	
-			collection.find(query).toArray((err, objs) => {
+			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
 				if (err) {
 					reject('Cannot get you a list of ', err)
 				} else {
@@ -398,12 +433,46 @@ function getGameStatisticsPerUser(req, res){
 	});
 }
 
-
-cl('WebSocket is Ready');
-
-function getRand(size){
-	return Math.random().toString(36).substring(2,2+size)
+// TODO: perhaps use index of question instead of finding by id (TODONE for now)
+function checkIfCorrect(answer, quest) {
+	return answer === quest.correct_answer
 }
+
+// very raw stages
+function handleGameOver(room) {
+	io.in(room.name).emit('gameCompleted') // TODO: send some stats
+	cl(room.players)
+	cl(`io.sockets.adapter before clients leaving room ${room.name}`, io.sockets.adapter.rooms)
+	delete io.sockets.adapter.rooms[room.name]
+	cl(`io.sockets.adapter.rooms after clients leaving room ${room.name}`, io.sockets.adapter.rooms)
+
+	var roomIdx = gameRooms.findIndex(({name}) => name === room.name) // TODO: try to ensure no duplicates in room names
+	gameRooms.splice(roomIdx, 1)
+}
+
+function getClientQuests(quests) {
+	return quests.map(quest => ({
+		_id: quest._id,
+		quest: quest.question,
+		answers: getShuffledAnswers(quest),
+		category: quest.category,
+		type: quest.type
+	}))
+}
+
+function getShuffledAnswers(quest) {
+	var answers = [];
+	for (let i = 0; i < quest.incorrect_answers.length; i++) {
+	  answers.push(quest.incorrect_answers[i]);
+	}
+	answers.push(quest.correct_answer);
+	
+	for (let i = answers.length - 1; i > 0; i--) {
+	  let j = Math.floor(Math.random() * (i + 1));
+	  [answers[i], answers[j]] = [answers[j], answers[i]];
+	}
+	return answers
+  }
 
 function getRoom() {
 	var room = gameRooms.find(({connections}) => connections === 1) || createRoom()
@@ -414,14 +483,26 @@ function getRoom() {
 function createRoom() {
 	var room = {
 		name: getRand(5),
-		connections: 0
+		connections: 0,
+		players: {},
+		currTurn: {
+			questIdx: 0,
+			answerCount: 0
+		}
 	}
 	gameRooms.push(room)
 	return room
 }
 
-function processedAnswerResult(room,answer){
-	var question = room.quests.find(question => question._id == answer.questionId)
-	return ((question.correct_answer == answer.selectedAnswer)*100)
+function getEmptyPlayerStats() {
+	return {
+		answeredCurrQuest: false,
+		currQuestPts: 0,
+		totalPts: 0,
+		correctAnswers: 0
+	}
 }
 
+function getRand(size){
+	return Math.random().toString(36).substring(2,2+size)
+}
