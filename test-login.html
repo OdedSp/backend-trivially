@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <input class="signup-name" placeholder="name">
+    <input class="signup-password" placeholder="password">
+    <input type="email" class="signup-email" placeholder="email">
+    <button class="signup-btn">signup</button>
+    <div class="signup-result"></div>
+    <br>
+    <br>
+    <br>
+    <br>
+    <input class="login-name" placeholder="name">
+    <input class="login-password" placeholder="password">
+    <button class="login-btn">login</button>
+    <div class="login-result"></div>
+    <br>
+    <br>
+    <br>
+    <br>
+
+
+
+
+    <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>
+    <script>
+    $('body').on('click','.signup-btn',()=>{
+        $.post({
+            url: 'http://localhost:3003/data/user',
+            data: JSON.stringify({"username":$('.signup-name').val(), "pass":$('.signup-password').val(),"signup_email":$('.signup-email').val()}),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json"
+            },
+            (data)=>{
+            $('.signup-result').html('Your Data: ' + JSON.stringify(data))
+            })
+    })
+
+    $('body').on('click','.login-btn',()=>{
+        $.post({
+            url: 'http://localhost:3003/login',
+            data: JSON.stringify({"username":$('.login-name').val(),"pass":$('.login-password').val()}),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json"
+            },
+            (data)=>{
+            $('.login-result').html('Your Data: ' + JSON.stringify(data))
+            })
+    })
+    
+    
+    
+    </script>
+</body>
+<script>
+
+</script>
+</html>

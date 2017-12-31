@@ -1,6 +1,8 @@
 // Place for custom routes that are
 // not covered by the generic API
 
+
+
 module.exports = (app) => {
 
     // Just for basic testing the socket
@@ -8,6 +10,11 @@ module.exports = (app) => {
         // res.end(__dirname);
         res.sendFile(__dirname + '/test-socket.html');
     });
+
+    app.get('/login',(req,res)=>{
+        res.sendFile(__dirname + '/test-login.html')
+    })    
+    
 
 }
 
