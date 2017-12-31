@@ -10,8 +10,8 @@ var cl = console.log;
 
 const express = require('express'),
 	bodyParser = require('body-parser'),
-	cors = require('cors'),
-	mongodb = require('mongodb')
+	cors = require('cors')
+	// mongodb = require('mongodb')
 
 const clientSessions = require('client-sessions');
 const upload = require('./uploads');
@@ -42,25 +42,10 @@ app.use(clientSessions({
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
+var myDbConnect = require('./mongo_connect/mongoConnect.js').dbConnect
+console.log(myDbConnect)
 
-function dbConnect() {
 
-	return new Promise((resolve, reject) => {
-		// Connection URL
-		var url = 'mongodb://localhost:27017/trivue';
-		// Use connect method to connect to the Server
-		mongodb.MongoClient.connect(url, function (err, db) {
-			if (err) {
-				cl('Cannot connect to DB', err)
-				reject(err);
-			}
-			else {
-				//cl('Connected to DB');
-				resolve(db);
-			}
-		});
-	});
-}
 
 
 
@@ -86,24 +71,29 @@ function getBasicQueryObj(req) {
 	return query;
 }
 
+
 // GETs a list
 app.get('/data/:objType', function (req, res) {
-	const objType = req.params.objType;
-	var query = getBasicQueryObj(req);
-	dbConnect().then(db => {
-		const collection = db.collection(objType);
-
-		collection.find(query).toArray((err, objs) => {
-			if (err) {
-				cl('Cannot get you a list of ', err)
-				res.json(404, { error: 'not found' })
-			} else {
-				cl('Returning list of ' + objs.length + ' ' + objType + 's');
-				res.json(objs);
-			}
-			db.close();
+	if (req.query.username) {
+		getGameStatisticsPerUser(req, res)
+	} else {
+		const objType = req.params.objType;
+		var query = getBasicQueryObj(req);
+		myDbConnect().then(db => {
+			const collection = db.collection(objType);
+	
+			collection.find(query).toArray((err, objs) => {
+				if (err) {
+					cl('Cannot get you a list of ', err)
+					res.json(404, { error: 'not found' })
+				} else {
+					cl('Returning list of ' + objs.length + ' ' + objType + 's');
+					res.json(objs);
+				}
+				db.close();
+			});
 		});
-	});
+	}
 });
 
 // GETs a single
@@ -112,7 +102,7 @@ app.get('/data/:objType/:id', function (req, res) {
 	const objId = req.params.id;
 	cl(`Getting you an ${objType} with id: ${objId}`);
 	var query = getBasicQueryObj(req)
-	dbConnect()
+	myDbConnect()
 		.then(db=> {
 			const collection = db.collection(objType);
 			
@@ -131,6 +121,7 @@ app.get('/data/:objType/:id', function (req, res) {
 		});
 });
 
+
 // DELETE
 app.delete('/data/:objType/:id', function (req, res) {
 	const objType 	= req.params.objType;
@@ -138,7 +129,7 @@ app.delete('/data/:objType/:id', function (req, res) {
 	cl(`Requested to DELETE the ${objType} with id: ${objId}`);
 	var query = getBasicQueryObj(req);
 	
-	dbConnect().then((db) => {
+	myDbConnect().then((db) => {
 		const collection = db.collection(objType);
 		collection.deleteOne(query, (err, result) => {
 			if (err) {
@@ -154,6 +145,48 @@ app.delete('/data/:objType/:id', function (req, res) {
 	});
 });
 
+// POST - adds game statistic
+// upload.single('file') was removed
+app.post('/data/statistic', function (req, res) {
+	
+		const objType = 'statistic';
+		cl('POST for ' + objType);
+	
+		const obj = req.body;
+	
+		myDbConnect().then((db) => {
+			db.collection('user').findOne(
+				{username:obj.username},
+				function(err,user){
+					if (user){
+						const collection = db.collection(objType);
+						collection.insert(obj, (err, result) => {
+							if (err) {
+								cl(`Couldnt insert a new ${objType}`, err)
+								res.json(500, { error: 'Failed to add' })
+							} else {
+								cl(objType + ' added');
+								res.json(obj);
+							}
+							db.close();
+						});
+					} else {
+						cl('could not find this user - statistic not updated')
+						res.json(500, { error: 'could not find this user - statistic not updated' })					
+					}
+				}
+			);
+		});
+	
+	});
+		
+
+// GET - a list of game results per user name
+app.get('/data/statistic/:userName', function (req, res){
+	cl('inside stats per user')
+});
+
+
 // POST - adds 
 app.post('/data/:objType', upload.single('file'), function (req, res) {
 	//console.log('req.file', req.file);
@@ -163,6 +196,7 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 	cl('POST for ' + objType);
 
 	const obj = req.body;
+	cl('body>>> ', obj)
 	delete obj._id;
 	if (objTypeRequiresUser[objType]){
 		if (req.session.user) {
@@ -179,7 +213,7 @@ app.post('/data/:objType', upload.single('file'), function (req, res) {
 
 
 
-	dbConnect().then((db) => {
+	myDbConnect().then((db) => {
 		const collection = db.collection(objType);
 
 		collection.insert(obj, (err, result) => {
@@ -205,7 +239,7 @@ app.put('/data/:objType/:id', function (req, res) {
 	cl(`Requested to UPDATE the ${objType} with id: ${objId}`);
 	var query = getBasicQueryObj(req)
 	
-	dbConnect().then((db) => {
+	myDbConnect.then((db) => {
 		const collection = db.collection(objType);
 		collection.updateOne(query, newObj,
 			(err, result) => {
@@ -223,19 +257,26 @@ app.put('/data/:objType/:id', function (req, res) {
 
 // Basic Login/Logout/Protected assets
 app.post('/login', function (req, res) {
-	dbConnect().then((db) => {
-		db.collection('user').findOne({ username: req.body.username, pass: req.body.pass }, function (err, user) {
-			if (user) {
-				cl('Login Succesful');
-				delete user.pass;
-				req.session.user = user;  
-				res.json({ token: 'Beareloginr: puk115th@b@5t', user });
-			} else {
-				cl('Login NOT Succesful');
-				req.session.user = null;
-				res.json(403, { error: 'Login failed' })
-			}
-		});
+	var lastLogin = new Date().toUTCString()
+	myDbConnect().then((db) => {
+		db.collection('user').findOneAndUpdate(
+			{ username: req.body.username, pass: req.body.pass },
+			{ $set:  {"last_login" : lastLogin}},
+				function (err, user) {
+					if (user) {
+						cl('Login Succesful');
+						delete user.pass;
+						delete user.lastErrorObject;
+						delete user.ok;
+						req.session.user = user;  
+						res.json({ message: 'login successful', user });
+					} else {
+						cl('Login NOT Succesful');
+						req.session.user = null;
+						res.json(403, { error: 'Login failed' })
+					}
+				}
+			);
 	});
 });
 
@@ -269,10 +310,7 @@ http.listen(3003, function () {
 	console.log(`PUT (update): \t\t ${baseUrl}/{entity}/{id}`);
 	console.log(`POST (add): \t\t ${baseUrl}/{entity}`);
 
-});
-
-module.exports = dbConnect
-	
+});	
 	
 const TriviaService = require('./services/TriviaService')
 
@@ -294,7 +332,7 @@ io.on('connection', function (socket) {
 			socket.emit('waitingForOpponent')
 			if (botMode) require('./triviaRivalBot')()
 		} else {
-			TriviaService.getQuestionSet(5, dbConnect)
+			TriviaService.getQuestionSet(5)
 			.then(quests => {
 				room.quests = quests // same room pointer in both sockets so this works
 				var currQuest = room.quests[room.currQuestIdx]
@@ -343,7 +381,7 @@ io.on('connection', function (socket) {
 				if (currQuest) {
 					room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
 					io.in(room.name).emit('nextRound', TriviaService.getUserQuest(currQuest))
-				} else TriviaService.handleGameOver(room, io, dbConnect)
+				} else TriviaService.handleGameOver(room, io)
 			}, 3000)
 		
 		}
@@ -361,6 +399,24 @@ cl('WebSocket is Ready');
 //******************** Functions used in the trivia socket connection ************************//
 
 // gets a set of questions
+function getGameStatisticsPerUser(req, res){
+	const objType = 'statistic';
+	var query = {username:req.query.username};
+	myDbConnect().then(db => {
+		const collection = db.collection(objType);
+
+		collection.find(query).toArray((err, objs) => {
+			if (err) {
+				cl('Cannot get you a list of ', err)
+				res.json(404, { error: 'not found' })
+			} else {
+				cl('Returning list of ' + objs.length + ' ' + objType + 's');
+				res.json(objs);
+			}
+			db.close();
+		});
+	});
+}
 // function getQuestionSet(count) {
 // 	var collectionName = 'quest'
 // 	// var query = {}

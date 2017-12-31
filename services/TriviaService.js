@@ -1,5 +1,6 @@
 const cl = console.log
-const dbConnect = require('../server-full')
+
+const { dbConnect } = require('../mongo_connect/mongoConnect.js')
 
 const gameRooms = []
 
