@@ -102,42 +102,6 @@ function _updateQuestAnswerCounters(answerCounters, dbConnect) {
 	// })
 }
 
-// // TODO: get rid of this
-// function getClientQuests(quests) {
-// 	return quests.map(quest => ({
-// 		_id: quest._id,
-// 		quest: quest.question,
-// 		answers: getShuffledAnswers(quest),
-// 		category: quest.category,
-// 		type: quest.type
-// 	}))
-// }
-
-// function getShuffledAnswers(quest) {
-// 	var answers = [];
-// 	for (let i = 0; i < quest.incorrect_answers.length; i++) {
-// 	  answers.push(quest.incorrect_answers[i]);
-// 	}
-// 	answers.push(quest.correct_answer);
-	
-// 	for (let i = answers.length - 1; i > 0; i--) {
-// 	  let j = Math.floor(Math.random() * (i + 1));
-// 	  [answers[i], answers[j]] = [answers[j], answers[i]];
-// 	}
-// 	return answers
-//   }
-
-
-
-// function getEmptyPlayerStats() {
-// 	return {
-// 		answeredCurrQuest: false,
-// 		currQuestPts: 0,
-// 		totalPts: 0,
-// 		correctAnswers: 0
-// 	}
-// }
-
 function _getRand(size){
 	return Math.random().toString(36).substring(2,2+size)
 }
