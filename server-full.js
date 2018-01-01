@@ -43,7 +43,6 @@ const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
 var myDbConnect = require('./mongo_connect/mongoConnect.js').dbConnect
-console.log(myDbConnect)
 
 
 
@@ -73,6 +72,7 @@ function getBasicQueryObj(req) {
 
 
 // GETs a list
+//first, we check if a username was sent, if so we go on to getting game stats
 app.get('/data/:objType', function (req, res) {
 	if (req.query.username) {
 		getGameStatisticsPerUser(req, res)
@@ -188,24 +188,23 @@ app.get('/data/statistic/:userName', function (req, res){
 
 
 // POST - adds 
-app.post('/data/:objType', upload.single('file'), function (req, res) {
+app.post('/data/user', upload.single('file'), function (req, res) {
 	//console.log('req.file', req.file);
 	// console.log('req.body', req.body);
 
-	const objType = req.params.objType;
+	const objType = 'user';
 	cl('POST for ' + objType);
 
 	const obj = req.body;
-	cl('body>>> ', obj)
 	delete obj._id;
-	if (objTypeRequiresUser[objType]){
-		if (req.session.user) {
-			obj.userId = req.session.user._id;
-		} else {
-			res.json(403, { error: 'Please Login first' })
-			return;
-		}
-	} 
+	// if (objTypeRequiresUser[objType]){
+	// 	if (req.session.user) {
+	// 		obj.userId = req.session.user._id;
+	// 	} else {
+	// 		res.json(403, { error: 'Please Login first' })
+	// 		return;
+	// 	}
+	// } 
 	// If there is a file upload, add the url to the obj
 	// if (req.file) {
 	// 	obj.imgUrl = serverRoot + req.file.filename;
@@ -257,7 +256,7 @@ app.put('/data/:objType/:id', function (req, res) {
 
 // Basic Login/Logout/Protected assets
 app.post('/login', function (req, res) {
-	var lastLogin = new Date().toUTCString()
+	var lastLogin = Date.now()
 	myDbConnect().then((db) => {
 		db.collection('user').findOneAndUpdate(
 			{ username: req.body.username, pass: req.body.pass },
@@ -398,8 +397,7 @@ cl('WebSocket is Ready');
 
 //******************** Functions used in the trivia socket connection ************************//
 
-// gets a set of questions
-function getGameStatisticsPerUser(req, res){
+function ggetGameStatisticsPerUser(req, res){
 	const objType = 'statistic';
 	var query = {username:req.query.username};
 	myDbConnect().then(db => {
@@ -411,11 +409,52 @@ function getGameStatisticsPerUser(req, res){
 				res.json(404, { error: 'not found' })
 			} else {
 				cl('Returning list of ' + objs.length + ' ' + objType + 's');
-				res.json(objs);
+				var stats = aggregatedResults(objs)
+				res.json(stats);
 			}
 			db.close();
 		});
 	});
+}
+
+// gets a set of questions
+// function aggregateStats(req, res){
+// 	const objType = 'statistic';
+// 	var query = {username:req.query.username};
+// 	myDbConnect().then(db => {
+// 		const collection = db.collection(objType);
+
+// 		collection.find(query).toArray((err, objs) => {
+// 			if (err) {
+// 				cl('Cannot get you a list of ', err)
+// 				res.json(404, { error: 'not found' })
+// 			} else {
+// 				cl('Returning list of ' + objs.length + ' ' + objType + 's');
+// 				res.json(aggregatedResults(objs));
+// 			}
+// 			db.close();
+// 		});
+// 	});
+// }
+
+function aggregatedResults(games){
+	let gamesWon = 0,
+		totalQuestions = 0,
+		correctAnswers = 0
+	for (var game of games){
+		if (game.game_results.win === true) {
+			gamesWon++
+		}
+		totalQuestions += game.game_results.total_questions
+		correctAnswers += game.game_results.correct_questions
+		
+	}
+	return {
+		totalGames: games.length, 
+		gamesWon : gamesWon, 
+		totalQuestions: totalQuestions, 
+		correctAnswers: correctAnswers
+		}
 }
 // function getQuestionSet(count) {
 // 	var collectionName = 'quest'
