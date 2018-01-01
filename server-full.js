@@ -314,7 +314,8 @@ http.listen(3003, function () {
 	
 const TriviaService = require('./services/TriviaService')
 
-let botMode = true
+let rivalBot = require('./triviaRivalBot')
+let botMode = false
 
 io.on('connection', function (socket) {
 	cl('a user connected');
@@ -329,8 +330,8 @@ io.on('connection', function (socket) {
 		cl({room})
 		socket.join(room.name)
 		if (room.players.length === 1) {
-			socket.emit('waitingForOpponent')
-			if (botMode) require('./triviaRivalBot')()
+			socket.emit('waitingForRival')
+			if (botMode) rivalBot()
 		} else {
 			TriviaService.getQuestionSet(5)
 			.then(quests => {
@@ -382,7 +383,7 @@ io.on('connection', function (socket) {
 				if (currQuest) {
 					room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
 					io.in(room.name).emit('nextRound', TriviaService.getUserQuest(currQuest))
-				} else TriviaService.handleGameOver(room, io)
+				} else TriviaService.handleGameOver(room, 'gameCompleted', io)
 			}, 3000)
 		
 		}
@@ -390,8 +391,7 @@ io.on('connection', function (socket) {
 	
 	socket.on('disconnect', function () {
 		cl('user disconnected')
-		// io.in(room.name).emit('rivalLeft')
-		// TriviaService.handleGameOver(room, io, dbConnect)
+		if (room) TriviaService.handleGameOver(room, 'rivalLeft', io)
 	});
 });
 
