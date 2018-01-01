@@ -340,10 +340,11 @@ io.on('connection', function (socket) {
 
 				var player = room.players.find(({ socketId }) => socketId === socket.id)
 				var rival = room.players.find(({ socketId }) => socketId !== socket.id)
+
 				var userQuest = TriviaService.getUserQuest(currQuest)
-				
-				socket.emit('firstRound', { quest: userQuest, rival })
-				socket.in(room.name).emit('firstRound', { quest: userQuest, player })
+
+ 				socket.emit('firstRound', { quest: userQuest, rival, createdAt: room.createdAt })
+				socket.in(room.name).emit('firstRound', { quest: userQuest, rival: player, createdAt: room.createdAt })
 			})
 			.catch(err => cl(err))
 		}
@@ -369,7 +370,7 @@ io.on('connection', function (socket) {
 			answerId
 		})
 		
-		socket.emit('answerProcessed', points)
+		socket.emit('answerProcessed', { answerId, points })
 		
 		socket.in(room.name).emit('rivalAnswer', { answerId, points })
 		
@@ -417,42 +418,6 @@ function getGameStatisticsPerUser(req, res){
 		});
 	});
 }
-// function getQuestionSet(count) {
-// 	var collectionName = 'quest'
-// 	// var query = {}
-// 	return new Promise((resolve, reject) => {
-// 		dbConnect().then(db => {
-// 			const collection = db.collection(collectionName);
-			
-// 			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
-// 				if (err) {
-// 					reject('Cannot get you a list of ', err)
-// 				} else {
-// 					cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
-// 					resolve(objs);
-// 				}
-// 				db.close();
-// 			});
-// 		});
-// 	})
-// }
-
-// function updateQuestAnswerCounters(answerCounters) {
-// 	return new promise((resolve, reject) => {
-// 		db.connect().then(db => {
-// 			const collection = db.collection('quest')
-// 			answerCounters.forEach(counter => {
-// 				let writeRes = collection.update({_id: conter.questId},
-// 				{$inc: {
-// 					answeredCorrectlyCount: counter.correctCount,
-// 					answeredIncorrectlyCount: counter.incorrectCount
-// 				}})
-// 				cl({writeRes})
-// 			})
-// 		})
-// 	})
-// }
-
 
 //**** in order to save 1200 trivia questions to DB, take the following code out of comment ****//
 //**** (use 'node server-full', not 'nodemon', to ensure DB does not save duplicate documents) ****/
