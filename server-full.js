@@ -499,7 +499,7 @@ function getGameStatisticsPerUser(req, res){
 // 	return Math.floor(Math.random() * max)
 // }
 
-// dbConnect().
+// myDbConnect().
 // then(db => {
 // 	const collection = db.collection('quest');
 // 	cl('mockQuests.length', mockQuests.length)
