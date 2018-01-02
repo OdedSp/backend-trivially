@@ -434,11 +434,11 @@ function aggregatedResults(games){
 		gamesWon : gamesWon, 
 		totalQuestions: totalQuestions, 
 		correctAnswers: correctAnswers
-		}
+	}
 }
 
 
-//**** in order to save 1200 trivia questions to DB, take the following code out of comment ****//
+//**** in order to save 1020 trivia questions to DB, take the following code out of comment ****//
 //**** (use 'node server-full', not 'nodemon', to ensure DB does not save duplicate documents) ****/
 
 // var mockQuests = require('./mockData.json')
@@ -453,6 +453,16 @@ function aggregatedResults(games){
 // 	answeredIncorrectlyCount: 0
 // }))
 // cl('quests.length:', mockQuests.length)
+
+// mockQuests = shuffle(mockQuests)
+
+// function shuffle(a) {
+//     for (let i = a.length - 1; i > 0; i--) {
+//         const j = Math.floor(Math.random() * (i + 1));
+//         [a[i], a[j]] = [a[j], a[i]];
+//     }
+//     return a;
+// }
 
 // function getAnswersData(quest) {
 // 	var answers = []
@@ -488,4 +498,6 @@ function aggregatedResults(games){
 // 	const collection = db.collection('quest');
 // 	cl('mockQuests.length', mockQuests.length)
 // 	collection.insertMany(mockQuests)
-// })tus
+// })
+
+

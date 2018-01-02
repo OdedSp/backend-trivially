@@ -68,18 +68,19 @@ function createAnswerCounter(questId) {
 }
 
 function getQuestionSet(count) {
-	var collectionName = 'quest'
-	// var query = {}
 	return new Promise((resolve, reject) => {
 		dbConnect().then(db => {
-			const collection = db.collection(collectionName);
+			const collection = db.collection('quest');
 			
-			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
+			collection.aggregate([{$sample: { size: count }}]).toArray((err, quests) => {
 				if (err) {
 					reject('Cannot get you a list of ', err)
 				} else {
-					cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
-					resolve(objs);
+					cl('Returning list of ' + quests.length + ' quests');
+					quests.forEach(quest => {
+						quest.categoryImg = _getCategoryImgUrl(quest.category)
+					})
+					resolve(quests);
 				}
 				db.close();
 			});
@@ -106,6 +107,18 @@ function _updateQuestAnswerCounters(answerCounters) {
 
 function _getRand(size){
 	return Math.random().toString(36).substring(2,2+size)
+}
+
+function _getCategoryImgUrl(category) {
+	var imgUrl = 'http://res.cloudinary.com/koolshooz/image/upload/v1514905599/'
+
+	imgUrl += category.toLowerCase()
+					.replace(/\s&\s|\s/g, '-')
+					.concat('.jpg')
+
+	console.log(imgUrl)
+	
+	return imgUrl
 }
 
 module.exports = {
