@@ -39,17 +39,18 @@ function _createPlayer(socketId, user) {
 // }
 
 // very raw stages
-function handleGameOver(room, io) {
-	io.in(room.name).emit('gameCompleted') // TODO: send some stats
+function handleGameOver(room, ev, io) {
+	io.in(room.name).emit(ev) // TODO: send some stats
 	cl(room.players)
-	cl(`io.sockets.adapter before clients leaving room ${room.name}`, io.sockets.adapter.rooms)
+	// cl(`io.sockets.adapter before clients leaving room ${room.name}`, io.sockets.adapter.rooms)
 	delete io.sockets.adapter.rooms[room.name]
-	cl(`io.sockets.adapter.rooms after clients leaving room ${room.name}`, io.sockets.adapter.rooms)
+	// cl(`io.sockets.adapter.rooms after clients leaving room ${room.name}`, io.sockets.adapter.rooms)
 
 	var roomIdx = gameRooms.findIndex(({name}) => name === room.name) // TODO: try to ensure no duplicates in room names
-	gameRooms.splice(roomIdx, 1)
-
-	_updateQuestAnswerCounters(room.answerCounters, dbConnect)
+	if (roomIdx !== -1) {
+		gameRooms.splice(roomIdx, 1)
+		_updateQuestAnswerCounters(room.answerCounters)
+	}
 }
 
 function getUserQuest(quest) {
@@ -86,7 +87,7 @@ function getQuestionSet(count) {
 	})
 }
 
-function _updateQuestAnswerCounters(answerCounters, dbConnect) {
+function _updateQuestAnswerCounters(answerCounters) {
 	// return new Promise((resolve, reject) => {
 	return dbConnect().then(db => {
 		const collection = db.collection('quest')

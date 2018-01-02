@@ -43,7 +43,6 @@ const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
 var myDbConnect = require('./mongo_connect/mongoConnect.js').dbConnect
-console.log(myDbConnect)
 
 
 
@@ -73,6 +72,7 @@ function getBasicQueryObj(req) {
 
 
 // GETs a list
+//first, we check if a username was sent, if so we go on to getting game stats
 app.get('/data/:objType', function (req, res) {
 	if (req.query.username) {
 		getGameStatisticsPerUser(req, res)
@@ -188,24 +188,23 @@ app.get('/data/statistic/:userName', function (req, res){
 
 
 // POST - adds 
-app.post('/data/:objType', upload.single('file'), function (req, res) {
+app.post('/data/user', upload.single('file'), function (req, res) {
 	//console.log('req.file', req.file);
 	// console.log('req.body', req.body);
 
-	const objType = req.params.objType;
+	const objType = 'user';
 	cl('POST for ' + objType);
 
 	const obj = req.body;
-	cl('body>>> ', obj)
 	delete obj._id;
-	if (objTypeRequiresUser[objType]){
-		if (req.session.user) {
-			obj.userId = req.session.user._id;
-		} else {
-			res.json(403, { error: 'Please Login first' })
-			return;
-		}
-	} 
+	// if (objTypeRequiresUser[objType]){
+	// 	if (req.session.user) {
+	// 		obj.userId = req.session.user._id;
+	// 	} else {
+	// 		res.json(403, { error: 'Please Login first' })
+	// 		return;
+	// 	}
+	// } 
 	// If there is a file upload, add the url to the obj
 	// if (req.file) {
 	// 	obj.imgUrl = serverRoot + req.file.filename;
@@ -257,7 +256,7 @@ app.put('/data/:objType/:id', function (req, res) {
 
 // Basic Login/Logout/Protected assets
 app.post('/login', function (req, res) {
-	var lastLogin = new Date().toUTCString()
+	var lastLogin = Date.now()
 	myDbConnect().then((db) => {
 		db.collection('user').findOneAndUpdate(
 			{ username: req.body.username, pass: req.body.pass },
@@ -314,7 +313,8 @@ http.listen(3003, function () {
 	
 const TriviaService = require('./services/TriviaService')
 
-let botMode = true
+let rivalBot = require('./triviaRivalBot')
+let botMode = false
 
 io.on('connection', function (socket) {
 	cl('a user connected');
@@ -329,8 +329,8 @@ io.on('connection', function (socket) {
 		cl({room})
 		socket.join(room.name)
 		if (room.players.length === 1) {
-			socket.emit('waitingForOpponent')
-			if (botMode) require('./triviaRivalBot')()
+			socket.emit('waitingForRival')
+			if (botMode) rivalBot()
 		} else {
 			TriviaService.getQuestionSet(5)
 			.then(quests => {
@@ -340,10 +340,11 @@ io.on('connection', function (socket) {
 
 				var player = room.players.find(({ socketId }) => socketId === socket.id)
 				var rival = room.players.find(({ socketId }) => socketId !== socket.id)
+
 				var userQuest = TriviaService.getUserQuest(currQuest)
-				
-				socket.emit('firstRound', { quest: userQuest, rival })
-				socket.in(room.name).emit('firstRound', { quest: userQuest, player })
+
+ 				socket.emit('firstRound', { quest: userQuest, rival, createdAt: room.createdAt })
+				socket.in(room.name).emit('firstRound', { quest: userQuest, rival: player, createdAt: room.createdAt })
 			})
 			.catch(err => cl(err))
 		}
@@ -369,7 +370,7 @@ io.on('connection', function (socket) {
 			answerId
 		})
 		
-		socket.emit('answerProcessed', points)
+		socket.emit('answerProcessed', { answerId, points })
 		
 		socket.in(room.name).emit('rivalAnswer', { answerId, points })
 		
@@ -381,7 +382,7 @@ io.on('connection', function (socket) {
 				if (currQuest) {
 					room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
 					io.in(room.name).emit('nextRound', TriviaService.getUserQuest(currQuest))
-				} else TriviaService.handleGameOver(room, io)
+				} else TriviaService.handleGameOver(room, 'gameCompleted', io)
 			}, 3000)
 		
 		}
@@ -389,8 +390,7 @@ io.on('connection', function (socket) {
 	
 	socket.on('disconnect', function () {
 		cl('user disconnected')
-		// io.in(room.name).emit('rivalLeft')
-		// TriviaService.handleGameOver(room, io, dbConnect)
+		if (room) TriviaService.handleGameOver(room, 'rivalLeft', io)
 	});
 });
 
@@ -398,7 +398,6 @@ cl('WebSocket is Ready');
 
 //******************** Functions used in the trivia socket connection ************************//
 
-// gets a set of questions
 function getGameStatisticsPerUser(req, res){
 	const objType = 'statistic';
 	var query = {username:req.query.username};
@@ -411,11 +410,54 @@ function getGameStatisticsPerUser(req, res){
 				res.json(404, { error: 'not found' })
 			} else {
 				cl('Returning list of ' + objs.length + ' ' + objType + 's');
-				res.json(objs);
+				var stats = aggregatedResults(objs)
+				res.json(stats);
 			}
 			db.close();
 		});
 	});
+}
+<<<<<<< HEAD
+=======
+
+// gets a set of questions
+// function aggregateStats(req, res){
+// 	const objType = 'statistic';
+// 	var query = {username:req.query.username};
+// 	myDbConnect().then(db => {
+// 		const collection = db.collection(objType);
+
+// 		collection.find(query).toArray((err, objs) => {
+// 			if (err) {
+// 				cl('Cannot get you a list of ', err)
+// 				res.json(404, { error: 'not found' })
+// 			} else {
+// 				cl('Returning list of ' + objs.length + ' ' + objType + 's');
+// 				res.json(aggregatedResults(objs));
+// 			}
+// 			db.close();
+// 		});
+// 	});
+// }
+
+function aggregatedResults(games){
+	let gamesWon = 0,
+		totalQuestions = 0,
+		correctAnswers = 0
+	for (var game of games){
+		if (game.game_results.win === true) {
+			gamesWon++
+		}
+		totalQuestions += game.game_results.total_questions
+		correctAnswers += game.game_results.correct_questions
+		
+	}
+	return {
+		totalGames: games.length, 
+		gamesWon : gamesWon, 
+		totalQuestions: totalQuestions, 
+		correctAnswers: correctAnswers
+		}
 }
 // function getQuestionSet(count) {
 // 	var collectionName = 'quest'
@@ -453,6 +495,7 @@ function getGameStatisticsPerUser(req, res){
 // 	})
 // }
 
+>>>>>>> 807424b139c78ae3d8828dff251c4fa79a1196b9
 
 //**** in order to save 1200 trivia questions to DB, take the following code out of comment ****//
 //**** (use 'node server-full', not 'nodemon', to ensure DB does not save duplicate documents) ****/
