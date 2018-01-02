@@ -4,7 +4,8 @@ exports.dbConnect =  function dbConnect() {
     
         return new Promise((resolve, reject) => {
             // Connection URL
-            var url = 'mongodb://localhost:27017/trivue';
+            // var url = 'mongodb://localhost:27017/trivue';
+            var url = 'mongodb://trivially:kingKunta@ds235827.mlab.com:35827/trivially';
             // Use connect method to connect to the Server
             mongodb.MongoClient.connect(url, function (err, db) {
                 if (err) {
