@@ -2,7 +2,6 @@
 // not covered by the generic API
 
 
-
 module.exports = (app) => {
 
     // Just for basic testing the socket
@@ -13,8 +12,7 @@ module.exports = (app) => {
 
     app.get('/login',(req,res)=>{
         res.sendFile(__dirname + '/test-login.html')
-    })    
-    
+    })
 
 }
 
