@@ -397,7 +397,7 @@ cl('WebSocket is Ready');
 
 //******************** Functions used in the trivia socket connection ************************//
 
-function ggetGameStatisticsPerUser(req, res){
+function getGameStatisticsPerUser(req, res){
 	const objType = 'statistic';
 	var query = {username:req.query.username};
 	myDbConnect().then(db => {
