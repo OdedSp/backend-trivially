@@ -417,27 +417,6 @@ function getGameStatisticsPerUser(req, res){
 		});
 	});
 }
-
-// gets a set of questions
-// function aggregateStats(req, res){
-// 	const objType = 'statistic';
-// 	var query = {username:req.query.username};
-// 	myDbConnect().then(db => {
-// 		const collection = db.collection(objType);
-
-// 		collection.find(query).toArray((err, objs) => {
-// 			if (err) {
-// 				cl('Cannot get you a list of ', err)
-// 				res.json(404, { error: 'not found' })
-// 			} else {
-// 				cl('Returning list of ' + objs.length + ' ' + objType + 's');
-// 				res.json(aggregatedResults(objs));
-// 			}
-// 			db.close();
-// 		});
-// 	});
-// }
-
 function aggregatedResults(games){
 	let gamesWon = 0,
 		totalQuestions = 0,
@@ -457,41 +436,6 @@ function aggregatedResults(games){
 		correctAnswers: correctAnswers
 		}
 }
-// function getQuestionSet(count) {
-// 	var collectionName = 'quest'
-// 	// var query = {}
-// 	return new Promise((resolve, reject) => {
-// 		dbConnect().then(db => {
-// 			const collection = db.collection(collectionName);
-			
-// 			collection.aggregate([{$sample: { size: count }}]).toArray((err, objs) => {
-// 				if (err) {
-// 					reject('Cannot get you a list of ', err)
-// 				} else {
-// 					cl('Returning list of ' + objs.length + ' ' + collectionName + 's');
-// 					resolve(objs);
-// 				}
-// 				db.close();
-// 			});
-// 		});
-// 	})
-// }
-
-// function updateQuestAnswerCounters(answerCounters) {
-// 	return new promise((resolve, reject) => {
-// 		db.connect().then(db => {
-// 			const collection = db.collection('quest')
-// 			answerCounters.forEach(counter => {
-// 				let writeRes = collection.update({_id: conter.questId},
-// 				{$inc: {
-// 					answeredCorrectlyCount: counter.correctCount,
-// 					answeredIncorrectlyCount: counter.incorrectCount
-// 				}})
-// 				cl({writeRes})
-// 			})
-// 		})
-// 	})
-// }
 
 
 //**** in order to save 1200 trivia questions to DB, take the following code out of comment ****//
@@ -544,4 +488,4 @@ function aggregatedResults(games){
 // 	const collection = db.collection('quest');
 // 	cl('mockQuests.length', mockQuests.length)
 // 	collection.insertMany(mockQuests)
-// })
+// })tus
