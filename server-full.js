@@ -417,8 +417,6 @@ function getGameStatisticsPerUser(req, res){
 		});
 	});
 }
-<<<<<<< HEAD
-=======
 
 // gets a set of questions
 // function aggregateStats(req, res){
@@ -495,7 +493,6 @@ function aggregatedResults(games){
 // 	})
 // }
 
->>>>>>> 807424b139c78ae3d8828dff251c4fa79a1196b9
 
 //**** in order to save 1200 trivia questions to DB, take the following code out of comment ****//
 //**** (use 'node server-full', not 'nodemon', to ensure DB does not save duplicate documents) ****/
