@@ -111,13 +111,9 @@ function _getRand(size){
 
 function _getCategoryImgUrl(category) {
 	var imgUrl = 'http://res.cloudinary.com/koolshooz/image/upload/v1514905599/'
-
 	imgUrl += category.toLowerCase()
 					.replace(/\s&\s|\s/g, '-')
-					.concat('.jpg')
-
-	console.log(imgUrl)
-	
+					.concat('.jpg')	
 	return imgUrl
 }
 
