@@ -356,11 +356,12 @@ io.on('connection', function (socket) {
 	socket.on('playerAnswer',({ answerId, answerTime }) => {
 		cl('player answerId:', answerId)
 		cl('player answerTime:', answerTime)
+		answerTime = Math.floor(answerTime / 500) / 2
 		var currQuest = room.quests[room.currQuestIdx]
 		var points = 0
 
 		if (answerId === currQuest.correctAnswerId) {
-			points = 100 - 2 * Math.floor(answerTime / 500)
+			points = 100 - 4 * answerTime
 			points = Math.max(points, 10)
 			room.answerCounters[room.currQuestIdx].correctCount++
 		} else room.answerCounters[room.currQuestIdx].incorrectCount++
@@ -373,9 +374,9 @@ io.on('connection', function (socket) {
 			answerId
 		})
 		
-		socket.emit('answerProcessed', { answerId, points })
+		socket.emit('answerProcessed', { answerId, points, answerTime })
 		
-		socket.in(room.name).emit('rivalAnswer', { answerId, points })
+		socket.in(room.name).emit('rivalAnswer', { answerId, points, answerTime })
 		
 		if (room.players.every(({ answers }) => answers.length === room.currQuestIdx + 1)) {
 			io.in(room.name).emit('answerWas', currQuest.correctAnswerId)
