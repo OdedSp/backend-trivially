@@ -356,7 +356,7 @@ io.on('connection', function (socket) {
 	socket.on('playerAnswer',({ answerId, answerTime }) => {
 		cl('player answerId:', answerId)
 		cl('player answerTime:', answerTime)
-		answerTime = Math.floor(answerTime / 500) / 2
+		answerTime = (answerTime !== null)? Math.floor(answerTime / 500) / 2 : answerTime
 		var currQuest = room.quests[room.currQuestIdx]
 		var points = 0
 
