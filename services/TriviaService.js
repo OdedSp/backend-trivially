@@ -25,11 +25,10 @@ function _createRoom() {
 }
 
 function _createPlayer(socketId, user) {
+	user.avatar = user.avatar || 'http://res.cloudinary.com/koolshooz/image/upload/v1515061041/avatar.png'
 	return {
 		socketId,
-		id: '__mongo_id__', // user._id
-		name: '__the_username__', // user.name,
-		avatar: '__img_url__',
+		user,
 		answers: []
 	}
 }

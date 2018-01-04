@@ -341,8 +341,8 @@ io.on('connection', function (socket) {
 				var currQuest = room.quests[room.currQuestIdx]
 				room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
 
-				var player = room.players.find(({ socketId }) => socketId === socket.id)
-				var rival = room.players.find(({ socketId }) => socketId !== socket.id)
+				var player = room.players.find(({ socketId }) => socketId === socket.id).user
+				var rival = room.players.find(({ socketId }) => socketId !== socket.id).user
 
 				var userQuest = TriviaService.getUserQuest(currQuest)
 
