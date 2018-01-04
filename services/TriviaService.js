@@ -47,6 +47,7 @@ function handleGameOver(room, ev, io) {
 
 	var roomIdx = gameRooms.findIndex(({name}) => name === room.name) // TODO: try to ensure no duplicates in room names
 	if (roomIdx !== -1) {
+		cl('1 game room disposed')
 		gameRooms.splice(roomIdx, 1)
 		_updateQuestAnswerCounters(room.answerCounters)
 	}

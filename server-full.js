@@ -123,7 +123,6 @@ app.get('/data/:objType/:id', function (req, res) {
 		});
 });
 
-
 // DELETE
 app.delete('/data/:objType/:id', function (req, res) {
 	const objType 	= req.params.objType;
@@ -341,9 +340,13 @@ io.on('connection', function (socket) {
 				var currQuest = room.quests[room.currQuestIdx]
 				room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
 
-				var player = room.players.find(({ socketId }) => socketId === socket.id).user
-				var rival = room.players.find(({ socketId }) => socketId !== socket.id).user
 
+				/**** TAKE CARE OF THIS SH */
+				var player = room.players.find(({ socketId }) => socketId === socket.id).user
+				if (player.username === 'Myself') player.username = 'Rival'
+				var rival = room.players.find(({ socketId }) => socketId !== socket.id).user
+				if (rival.username === 'Myself') rival.username = 'Rival'
+				
 				var userQuest = TriviaService.getUserQuest(currQuest)
 
  				socket.emit('firstRound', { quest: userQuest, rival, createdAt: room.createdAt })
@@ -391,8 +394,12 @@ io.on('connection', function (socket) {
 		
 		}
 	})
+
+	socket.on('leftGame', _=> {
+		if (room) TriviaService.handleGameOver(room, 'rivalLeft', io)
+	})
 	
-	socket.on('disconnect', function () {
+	socket.on('disconnect', _=> {
 		cl('user disconnected')
 		if (room) TriviaService.handleGameOver(room, 'rivalLeft', io)
 	});
