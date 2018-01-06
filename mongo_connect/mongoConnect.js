@@ -9,7 +9,7 @@ exports.dbConnect =  function dbConnect() {
             // Use connect method to connect to the Server
             mongodb.MongoClient.connect(url, function (err, db) {
                 if (err) {
-                    cl('Cannot connect to DB', err)
+                    console.log('Cannot connect to DB', err)
                     reject(err);
                 }
                 else {

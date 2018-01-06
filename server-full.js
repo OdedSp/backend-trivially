@@ -10,8 +10,8 @@ var cl = console.log;
 
 const express = require('express'),
 	bodyParser = require('body-parser'),
-	cors = require('cors')
-	// mongodb = require('mongodb')
+	cors = require('cors'),
+	mongodb = require('mongodb')
 
 const clientSessions = require('client-sessions');
 const upload = require('./uploads');
@@ -75,27 +75,40 @@ function getBasicQueryObj(req) {
 
 // GETs a list
 //first, we check if a username was sent, if so we go on to getting game stats
-app.get('/data/:objType', function (req, res) {
-	if (req.query.username) {
-		getGameStatisticsPerUser(req, res)
-	} else {
-		const objType = req.params.objType;
-		var query = getBasicQueryObj(req);
-		myDbConnect().then(db => {
-			const collection = db.collection(objType);
-	
-			collection.find(query).toArray((err, objs) => {
-				if (err) {
-					cl('Cannot get you a list of ', err)
-					res.json(404, { error: 'not found' })
-				} else {
-					cl('Returning list of ' + objs.length + ' ' + objType + 's');
-					res.json(objs);
-				}
-				db.close();
-			});
-		});
+app.get('/data/statistic/:userId', function (req, res) {
+	cl('Entered GET stats')
+
+	if (req.params.userId) {
+		cl('Entered GET stats')
+		var query = {userId: req.params.userId}
+		getGameStatisticsPerUser(query)
+		.then(statObj => {
+			cl('Returning user statistics');
+			res.json(statObj);
+		})
+		.catch(error => {
+			cl('Cannot get statistics for user', error)
+			res.json(404, { error })
+		})
 	}
+	// } else {
+	// 	const objType = req.params.objType;
+	// 	var query = getBasicQueryObj(req);
+	// 	myDbConnect().then(db => {
+	// 		const collection = db.collection(objType);
+	
+	// 		collection.find(query).toArray((err, objs) => {
+	// 			if (err) {
+	// 				cl('Cannot get you a list of ', err)
+	// 				res.json(404, { error: 'not found' })
+	// 			} else {
+	// 				cl('Returning list of ' + objs.length + ' ' + objType + 's');
+	// 				res.json(objs);
+	// 			}
+	// 			db.close();
+	// 		});
+	// 	});
+	// }
 });
 
 // GETs a single
@@ -153,21 +166,21 @@ app.post('/data/statistic', function (req, res) {
 		const objType = 'statistic';
 		cl('POST for ' + objType);
 	
-		const obj = req.body;
+		const gameStat = req.body;
 	
 		myDbConnect().then((db) => {
 			db.collection('user').findOne(
-				{username:obj.username},
+				{_id: new mongodb.ObjectID(gameStat.userId)},
 				function(err,user){
 					if (user){
 						const collection = db.collection(objType);
-						collection.insert(obj, (err, result) => {
+						collection.insert(gameStat, (err, result) => {
 							if (err) {
 								cl(`Couldnt insert a new ${objType}`, err)
 								res.json(500, { error: 'Failed to add' })
 							} else {
 								cl(objType + ' added');
-								res.json(obj);
+								res.json(gameStat);
 							}
 							db.close();
 						});
@@ -182,10 +195,10 @@ app.post('/data/statistic', function (req, res) {
 	});
 		
 
-// GET - a list of game results per user name
-app.get('/data/statistic/:userName', function (req, res){
-	cl('inside stats per user')
-});
+// // GET - a list of game results per user name
+// app.get('/data/statistic/:userName', function (req, res){
+// 	cl('inside stats per user')
+// });
 
 
 // POST - adds 
@@ -216,16 +229,23 @@ app.post('/data/user', upload.single('file'), function (req, res) {
 	myDbConnect().then((db) => {
 		const collection = db.collection(objType);
 
-		collection.insert(obj, (err, result) => {
-			if (err) {
-				cl(`Couldnt insert a new ${objType}`, err)
-				res.json(500, { error: 'Failed to add' })
-			} else {
-				cl(objType + ' added');
-				res.json(obj);
-			}
-			db.close();
-		});
+		collection.findOne(
+			{ $or: [{signup_email: obj.signup_email}, {username: obj.username}] },
+			(err, user) => {
+				if (user) res.json(412, {error: 'username or email already in the system'})
+				else {
+					collection.insert(obj, (err, result) => {
+						if (err) {
+							cl(`Couldnt insert a new ${objType}`, err)
+							res.json(500, { error: 'Failed to add' })
+						} else {
+							cl(objType + ' added');
+							res.json(obj);
+						}
+						db.close();
+					});
+				}
+			})
 	});
 
 });
@@ -409,23 +429,26 @@ cl('WebSocket is Ready');
 
 //******************** Functions used in the trivia socket connection ************************//
 
-function getGameStatisticsPerUser(req, res){
+function getGameStatisticsPerUser(query){
 	const objType = 'statistic';
-	var query = {username:req.query.username};
-	myDbConnect().then(db => {
-		const collection = db.collection(objType);
-
-		collection.find(query).toArray((err, objs) => {
-			if (err) {
-				cl('Cannot get you a list of ', err)
-				res.json(404, { error: 'not found' })
-			} else {
-				cl('Returning list of ' + objs.length + ' ' + objType + 's');
-				var stats = aggregatedResults(objs)
-				res.json(stats);
-			}
-			db.close();
-		});
+	// var query = {username:req.query.username};
+	return myDbConnect().then(db => {
+		return new Promise((resolve, reject) => {
+			const collection = db.collection(objType);
+			collection.find(query).toArray((err, objs) => {
+				if (err) {
+					reject(err)
+					// cl('Cannot get you a list of ', err)
+					// res.json(404, { error: 'not found' })
+				} else {
+					// cl('Returning list of ' + objs.length + ' ' + objType + 's');
+					if (objs.length === 0) reject('No stats found for this user ID')
+					else resolve(aggregatedResults(objs))
+					// res.json(stats);
+				}
+				db.close();
+			});
+		})
 	});
 }
 function aggregatedResults(games){
