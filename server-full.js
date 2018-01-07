@@ -363,9 +363,9 @@ io.on('connection', function (socket) {
 
 				/**** TAKE CARE OF THIS SH */
 				var player = room.players.find(({ socketId }) => socketId === socket.id).user
-				if (player.username === 'Myself') player.username = 'Rival'
+				if (player.username === 'Me') player.username = 'Rival'
 				var rival = room.players.find(({ socketId }) => socketId !== socket.id).user
-				if (rival.username === 'Myself') rival.username = 'Rival'
+				if (rival.username === 'Me') rival.username = 'Rival'
 				
 				var userQuest = TriviaService.getUserQuest(currQuest)
 
