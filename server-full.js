@@ -338,8 +338,12 @@ const TriviaService = require('./services/TriviaService')
 let rivalBot = require('./triviaRivalBot')
 let botMode = false
 
+let connectedCount = 0
+
 io.on('connection', function (socket) {
 	cl('a user connected');
+	connectedCount++
+	io.emit('connectedCount', connectedCount)
 	var room = null
 
 	socket.on('joinGameRoom', (user) => {
@@ -421,6 +425,8 @@ io.on('connection', function (socket) {
 	
 	socket.on('disconnect', _=> {
 		cl('user disconnected')
+		connectedCount--
+		io.emit('connectedCount', connectedCount)
 		if (room) TriviaService.handleGameOver(room, 'rivalLeft', io)
 	});
 });
