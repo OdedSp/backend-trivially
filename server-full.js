@@ -211,6 +211,11 @@ app.post('/data/user', upload.single('file'), function (req, res) {
 
 	const obj = req.body;
 	delete obj._id;
+
+	if (!obj.avatar) {
+		let randNum = Math.ceil(Math.random() * 5)
+		obj.avatar = `http://res.cloudinary.com/koolshooz/image/upload/v1515591071/avatar_${randNum}.png`
+	}
 	// if (objTypeRequiresUser[objType]){
 	// 	if (req.session.user) {
 	// 		obj.userId = req.session.user._id;
@@ -240,6 +245,7 @@ app.post('/data/user', upload.single('file'), function (req, res) {
 							res.json(500, { error: 'Failed to add' })
 						} else {
 							cl(objType + ' added');
+							delete obj.pass
 							res.json(obj);
 						}
 						db.close();
@@ -283,12 +289,13 @@ app.post('/login', function (req, res) {
 			{ username: req.body.username, pass: req.body.pass },
 			{ $set:  {"last_login" : lastLogin}},
 				function (err, user) {
-					if (user) {
+					if (user.value) {
 						cl('Login Succesful');
-						delete user.pass;
+						delete user.value.pass;
 						delete user.lastErrorObject;
 						delete user.ok;
-						req.session.user = user;  
+						req.session.user = user; 
+						cl({user}) 
 						res.json({ message: 'login successful', user });
 					} else {
 						cl('Login NOT Succesful');
@@ -347,34 +354,44 @@ io.on('connection', function (socket) {
 	var room = null
 
 	socket.on('joinGameRoom', (user) => {
-		// TriviaService.getRoom(socket.id, user)
-		// .then(res => {
-		// 	room = res
-		// })
+		// cl(user, 'askedToJoinRoom')
+
 		room = TriviaService.getRoom(socket.id, user)
-		cl({room})
 		socket.join(room.name)
 		if (room.players.length === 1) {
 			socket.emit('waitingForRival')
 			if (botMode) rivalBot()
 		} else {
-			TriviaService.getQuestionSet(5)
-			.then(quests => {
-				room.quests = quests // same room pointer in both sockets so this works
+			let playerStatPrms = room.players.map(player => {
+				return getGameStatisticsPerUser({userId: player.user._id})
+						.then(statObj => {
+							player.user.statObj = statObj
+						})
+						.catch(err => player.statObj = null)
+			})
+
+			let questPrm = TriviaService.getQuestionSet(5)
+							.then(quests => {
+								room.quests = quests // same room pointer in both sockets so this works
+								// var currQuest = room.quests[room.currQuestIdx]
+								// room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))				
+								
+								// var userQuest = TriviaService.getUserQuest(currQuest)
+
+								// socket.emit('firstRound', { quest: userQuest, rival, createdAt: room.createdAt })
+								// socket.in(room.name).emit('firstRound', { quest: userQuest, rival: player, createdAt: room.createdAt })
+							})
+
+			Promise.all([...playerStatPrms, questPrm])
+			.then(_=> {
 				var currQuest = room.quests[room.currQuestIdx]
-				room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
-
-
-				/**** TAKE CARE OF THIS SH */
-				var player = room.players.find(({ socketId }) => socketId === socket.id).user
-				if (player.username === 'Me') player.username = 'Rival'
-				var rival = room.players.find(({ socketId }) => socketId !== socket.id).user
-				if (rival.username === 'Me') rival.username = 'Rival'
-				
 				var userQuest = TriviaService.getUserQuest(currQuest)
+				room.answerCounters.push(TriviaService.createAnswerCounter(currQuest._id))
+				var [player, rival] = [ room.players.find(({ socketId }) => socketId === socket.id).user,
+										  room.players.find(({ socketId }) => socketId !== socket.id).user ]
 
- 				socket.emit('firstRound', { quest: userQuest, rival, createdAt: room.createdAt })
-				socket.in(room.name).emit('firstRound', { quest: userQuest, rival: player, createdAt: room.createdAt })
+				socket.emit('firstRound', { quest: userQuest, rival, player, createdAt: room.createdAt })
+				socket.in(room.name).emit('firstRound', { quest: userQuest, rival: player, player: rival, createdAt: room.createdAt })
 			})
 			.catch(err => cl(err))
 		}
@@ -460,20 +477,20 @@ function getGameStatisticsPerUser(query){
 function aggregatedResults(games){
 	let gamesWon = 0,
 		totalQuestions = 0,
-		correctAnswers = 0
-	for (var game of games){
-		if (game.game_results.win === true) {
-			gamesWon++
-		}
-		totalQuestions += game.game_results.total_questions
-		correctAnswers += game.game_results.correct_questions
-		
+		correctAnswers = 0,
+		totalPts = 0
+	for (var { gameResults } of games){
+		if (gameResults.win) gamesWon++
+		totalQuestions += gameResults.totalQuestions
+		correctAnswers += gameResults.correctQuestions
+		totalPts += gameResults.pts
 	}
 	return {
 		totalGames: games.length, 
-		gamesWon : gamesWon, 
-		totalQuestions: totalQuestions, 
-		correctAnswers: correctAnswers
+		gamesWon, 
+		totalQuestions, 
+		correctAnswers,
+		totalPts
 	}
 }
 

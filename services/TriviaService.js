@@ -25,7 +25,8 @@ function _createRoom() {
 }
 
 function _createPlayer(socketId, user) {
-	user.avatar = user.avatar || 'http://res.cloudinary.com/koolshooz/image/upload/v1515061041/avatar.png'
+	// user.avatar = user.avatar || 'http://res.cloudinary.com/koolshooz/image/upload/v1515061041/avatar.png'
+	if (user.username.toLowerCase() === 'me') user.username = 'Rival'
 	return {
 		socketId,
 		user,
