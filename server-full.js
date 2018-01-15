@@ -480,10 +480,12 @@ function aggregatedResults(games){
 		correctAnswers = 0,
 		totalPts = 0
 	for (var { gameResults } of games){
-		if (gameResults.win) gamesWon++
-		totalQuestions += gameResults.totalQuestions
-		correctAnswers += gameResults.correctQuestions
-		totalPts += gameResults.pts
+		if ( gameResults && gameResults.win) gamesWon++
+		if (gameResults) {
+			totalQuestions += gameResults.totalQuestions
+			correctAnswers += gameResults.correctQuestions
+			totalPts += gameResults.pts
+		}
 	}
 	return {
 		totalGames: games.length, 
